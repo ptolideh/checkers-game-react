@@ -26,6 +26,10 @@ const calculateValidMoves = (game: Square[][], square: Square) => {
   return validNextMoves;
 };
 
+const isSelected = (square: Square, selectedSquare: Square | null) => {
+  return square.x === selectedSquare?.x && square.y === selectedSquare?.y;
+};
+
 type Piece = {
   color: 'red' | 'black';
   isKing: boolean;
@@ -44,7 +48,7 @@ interface State {
   game: Square[][];
 }
 
-type Action = { type: 'SELECT_PIECE'; payload: Square };
+type Action = { type: 'SELECT_PIECE'; payload: Square } | { type: 'DESELECT_PIECE' };
 
 const getInitialGameState = () => {
   const game: Square[][] = Array.from({ length: 8 }, () =>
@@ -82,6 +86,12 @@ function reducer(state: State, action: Action): State {
         validMoves: calculateValidMoves(state.game, action.payload),
         selectedSquare: action.payload,
       };
+    case 'DESELECT_PIECE':
+      return {
+        ...state,
+        validMoves: [],
+        selectedSquare: null,
+      };
     default:
       return state;
   }
@@ -109,17 +119,13 @@ export const App: React.FC = () => {
                   },
                 )}
                 onClick={() => {
-                  if (!square.piece) return;
-                  else dispatch({ type: 'SELECT_PIECE', payload: square });
+                  if (isSelected(square, state.selectedSquare))
+                    dispatch({ type: 'DESELECT_PIECE' });
+                  else if (square.piece) dispatch({ type: 'SELECT_PIECE', payload: square });
                 }}
               >
                 {square.piece ? (
-                  <Piece
-                    {...square.piece}
-                    isSelected={
-                      square.x === state.selectedSquare?.x && square.y === state.selectedSquare?.y
-                    }
-                  />
+                  <Piece {...square.piece} isSelected={isSelected(square, state.selectedSquare)} />
                 ) : (
                   ''
                 )}
