@@ -1,16 +1,15 @@
+import { cn } from '@/lib/utils';
 import { useReducer, useState } from 'react';
 
-type Color = 'red' | 'black';
-
 type Piece = {
-  color: Color;
+  color: 'red' | 'black';
   isKing: boolean;
 };
 
 type Square = {
   x: number;
   y: number;
-  color: Color;
+  color: 'dark' | 'light';
   piece: Piece | null;
 };
 
@@ -20,13 +19,13 @@ interface State {
 
 const getInitialGameState = () => {
   const game: Square[][] = Array.from({ length: 8 }, () =>
-    Array.from({ length: 8 }, () => ({ x: 0, y: 0, color: 'red', piece: null })),
+    Array.from({ length: 8 }, () => ({ x: 0, y: 0, color: 'light', piece: null })),
   );
   for (let x = 0; x < 8; x++) {
     for (let y = 0; y < 8; y++) {
       const square = game[x][y];
       if ((x + y) % 2 !== 0) {
-        square.color = 'black';
+        square.color = 'dark';
       }
     }
   }
@@ -56,8 +55,10 @@ export const App: React.FC = () => {
             {row.map((square, columnIndex) => (
               <div
                 key={columnIndex}
-                className="border border-l-black border-r-black size-8"
-                style={{ backgroundColor: square.color }}
+                className={cn(
+                  'border border-l-black border-r-black size-8',
+                  square.color === 'dark' ? 'bg-orange-900' : 'bg-orange-100',
+                )}
               >
                 {''}
               </div>
