@@ -48,7 +48,10 @@ interface State {
   game: Square[][];
 }
 
-type Action = { type: 'SELECT_PIECE'; payload: Square } | { type: 'DESELECT_PIECE' };
+type Action =
+  | { type: 'SELECT_PIECE'; payload: Square }
+  | { type: 'DESELECT_PIECE' }
+  | { type: 'MOVE_PIECE'; payload: Square };
 
 const getInitialGameState = () => {
   const game: Square[][] = Array.from({ length: 8 }, () =>
@@ -92,6 +95,19 @@ function reducer(state: State, action: Action): State {
         validMoves: [],
         selectedSquare: null,
       };
+    case 'MOVE_PIECE':
+      const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
+      if (state.selectedSquare) {
+        nextState.game[state.selectedSquare.y][state.selectedSquare.x].piece = null;
+        nextState.game[action.payload.y][action.payload.x].piece = Object.assign(
+          {},
+          state.selectedSquare.piece,
+        );
+        nextState.selectedSquare = null;
+        nextState.validMoves = [];
+      }
+
+      return nextState;
     default:
       return state;
   }
@@ -119,9 +135,16 @@ export const App: React.FC = () => {
                   },
                 )}
                 onClick={() => {
-                  if (isSelected(square, state.selectedSquare))
+                  if (isSelected(square, state.selectedSquare)) {
                     dispatch({ type: 'DESELECT_PIECE' });
-                  else if (square.piece) dispatch({ type: 'SELECT_PIECE', payload: square });
+                  } else if (square.piece) {
+                    dispatch({ type: 'SELECT_PIECE', payload: square });
+                  } else if (state.validMoves.includes(getKeyFromCoordinates(square.x, square.y))) {
+                    dispatch({
+                      type: 'MOVE_PIECE',
+                      payload: square,
+                    });
+                  }
                 }}
               >
                 {square.piece ? (
