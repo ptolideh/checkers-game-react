@@ -29,77 +29,40 @@ const calculateValidMoves = (game: Square[][], square: Square) => {
   return validNextMoves;
 };
 
-// const calculateValidMoves = (game: Square[][], square: Square) => {
-//   const validNextMoves = [];
-//   if (square.piece?.isKing) {
-//   } else {
-//     if (square.piece?.color === 'red') {
-//       const nextMove1 = game[square.y + 1][square.x + 1];
-//       const nextMove2 = game[square.y + 1][square.x - 1];
-//       if (nextMove1?.piece === null)
-//         validNextMoves.push(getKeyFromCoordinates(nextMove1.x, nextMove1.y));
-//       else {
-//         const nextMove3 = game[square.y + 2][square.x + 2];
-//         if (nextMove3?.piece === null && nextMove1?.piece.color !== 'red')
-//           validNextMoves.push(getKeyFromCoordinates(nextMove3.x, nextMove3.y));
-//       }
-
-//       if (nextMove2?.piece === null) {
-//         validNextMoves.push(getKeyFromCoordinates(nextMove2.x, nextMove2.y));
-//       } else {
-//         const nextMove4 = game[square.y + 2][square.x - 2];
-//         if (nextMove4?.piece === null && nextMove2?.piece.color !== 'red')
-//           validNextMoves.push(getKeyFromCoordinates(nextMove4.x, nextMove4.y));
-//       }
-//     } else {
-//       const nextMove1 = game[square.y - 1][square.x + 1];
-//       const nextMove2 = game[square.y - 1][square.x - 1];
-//       if (nextMove1?.piece === null) {
-//         validNextMoves.push(getKeyFromCoordinates(nextMove1.x, nextMove1.y));
-//       } else {
-//         const nextMove3 = game[square.y - 2][square.x + 2];
-//         if (nextMove3?.piece === null && nextMove1?.piece.color !== 'black')
-//           validNextMoves.push(getKeyFromCoordinates(nextMove3.x, nextMove3.y));
-//       }
-//       if (nextMove2?.piece === null) {
-//         validNextMoves.push(getKeyFromCoordinates(nextMove2.x, nextMove2.y));
-//       } else {
-//         const nextMove4 = game[square.y - 2][square.x - 2];
-//         if (nextMove4?.piece === null && nextMove2?.piece.color !== 'black')
-//           validNextMoves.push(getKeyFromCoordinates(nextMove4.x, nextMove4.y));
-//       }
-//     }
-//   }
-//   return validNextMoves;
-// };
+const calculateValidJumps = (game: Square[][], square: Square) => {
+  const jumps = [];
+  if (square.piece?.color === 'red') {
+    const adjacentSquare1 = game[square.y + 1]?.[square.x + 1] ?? null;
+    const adjacentSquare2 = game[square.y + 1]?.[square.x - 1] ?? null;
+    if (adjacentSquare1?.piece?.color === 'black') {
+      const jumpSquare = game[square.y + 2]?.[square.x + 2] ?? null;
+      if (jumpSquare?.piece === null) jumps.push(getKeyFromCoordinates(jumpSquare.x, jumpSquare.y));
+    }
+    if (adjacentSquare2?.piece?.color === 'black') {
+      const jumpSquare = game[square.y + 2]?.[square.x - 2] ?? null;
+      if (jumpSquare?.piece === null) jumps.push(getKeyFromCoordinates(jumpSquare.x, jumpSquare.y));
+    }
+  } else if (square.piece?.color === 'black') {
+    const adjacentSquare1 = game[square.y - 1]?.[square.x + 1] ?? null;
+    const adjacentSquare2 = game[square.y - 1]?.[square.x - 1] ?? null;
+    if (adjacentSquare1?.piece?.color === 'red') {
+      const jumpSquare = game[square.y - 2]?.[square.x + 2] ?? null;
+      if (jumpSquare?.piece === null) jumps.push(getKeyFromCoordinates(jumpSquare.x, jumpSquare.y));
+    }
+    if (adjacentSquare2?.piece?.color === 'red') {
+      const jumpSquare = game[square.y - 2]?.[square.x - 2] ?? null;
+      if (jumpSquare?.piece === null) jumps.push(getKeyFromCoordinates(jumpSquare.x, jumpSquare.y));
+    }
+  }
+  return jumps;
+};
 
 const shouldJump = (game: Square[][]) => {
-  const jumps: string[] = [];
+  let jumps: string[] = [];
   game.forEach((row) => {
-    row.forEach((col) => {
-      if (col.piece?.color === 'red') {
-        const adjacentSquare1 = game[col.y + 1]?.[col.x + 1] ?? null;
-        const adjacentSquare2 = game[col.y + 1]?.[col.x - 1] ?? null;
-        if (adjacentSquare1?.piece?.color === 'black') {
-          const adjacentSquare3 = game[col.y + 2]?.[col.x + 2] ?? null;
-          if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
-        }
-        if (adjacentSquare2?.piece?.color === 'black') {
-          const adjacentSquare3 = game[col.y + 2]?.[col.x - 2] ?? null;
-          if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
-        }
-      } else if (col.piece?.color === 'black') {
-        const adjacentSquare1 = game[col.y - 1]?.[col.x + 1] ?? null;
-        const adjacentSquare2 = game[col.y - 1]?.[col.x - 1] ?? null;
-        if (adjacentSquare1?.piece?.color === 'red') {
-          const adjacentSquare3 = game[col.y - 2]?.[col.x + 2] ?? null;
-          if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
-        }
-        if (adjacentSquare2?.piece?.color === 'red') {
-          const adjacentSquare3 = game[col.y - 2]?.[col.x - 2] ?? null;
-          if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
-        }
-      }
+    row.forEach((square) => {
+      if (calculateValidJumps(game, square).length > 0)
+        jumps.push(getKeyFromCoordinates(square.x, square.y));
     });
   });
 
