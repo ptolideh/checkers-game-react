@@ -21,11 +21,18 @@ const getInitialGameState = () => {
   const game: Square[][] = Array.from({ length: 8 }, () =>
     Array.from({ length: 8 }, () => ({ x: 0, y: 0, color: 'light', piece: null })),
   );
-  for (let x = 0; x < 8; x++) {
-    for (let y = 0; y < 8; y++) {
-      const square = game[x][y];
-      if ((x + y) % 2 !== 0) {
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = game[row][col];
+      square.x = col;
+      square.y = row;
+      if ((row + col) % 2 !== 0) {
         square.color = 'dark';
+        if (row < 3) {
+          square.piece = { color: 'red', isKing: false };
+        } else if (row > 4) {
+          square.piece = { color: 'black', isKing: false };
+        }
       }
     }
   }
