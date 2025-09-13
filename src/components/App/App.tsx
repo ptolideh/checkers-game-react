@@ -84,7 +84,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         validMoves: calculateValidMoves(state.game, action.payload),
-        selectedSquare: action.payload,
+        selectedSquare: { ...action.payload },
       };
     case 'DESELECT_PIECE':
       return {
