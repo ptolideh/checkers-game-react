@@ -14,8 +14,11 @@ type Square = {
 };
 
 interface State {
+  selectedSquare: Square | null;
   game: Square[][];
 }
+
+type Action = { type: 'SELECT_PIECE'; payload: Square };
 
 const getInitialGameState = () => {
   const game: Square[][] = Array.from({ length: 8 }, () =>
@@ -40,11 +43,17 @@ const getInitialGameState = () => {
 };
 
 const initialState = {
+  selectedSquare: null,
   game: getInitialGameState(),
 };
 
-function reducer(state: State, action) {
+function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'SELECT_PIECE':
+      return {
+        ...state,
+        selectedSquare: action.payload,
+      };
     default:
       return state;
   }
@@ -66,8 +75,21 @@ export const App: React.FC = () => {
                   'border border-l-black border-r-black size-10 flex justify-center items-center',
                   square.color === 'dark' ? 'bg-orange-900' : 'bg-orange-100',
                 )}
+                onClick={() => {
+                  if (!square.piece) return;
+                  else dispatch({ type: 'SELECT_PIECE', payload: square });
+                }}
               >
-                {square.piece ? <Piece {...square.piece} /> : ''}
+                {square.piece ? (
+                  <Piece
+                    {...square.piece}
+                    isSelected={
+                      square.x === state.selectedSquare?.x && square.y === state.selectedSquare?.y
+                    }
+                  />
+                ) : (
+                  ''
+                )}
               </div>
             ))}
           </div>
@@ -77,17 +99,19 @@ export const App: React.FC = () => {
   );
 };
 
-const Piece: React.FC<Piece> = ({ color, isKing }) => {
+const Piece: React.FC<Piece & { isSelected?: boolean }> = ({ color, isKing, isSelected }) => {
   return (
     <div
       className={cn(
-        'rounded-full size-6 flex justify-center items-center',
+        'rounded-full size-6 flex justify-center items-center border-2',
         color === 'black' ? 'bg-black' : 'bg-red-600',
+        color === 'black' ? 'border-black' : 'border-red-600',
+        { 'border-green-300': isSelected },
       )}
     >
       {isKing ? (
-        <div className="flex items-center justify-center bg-white size-4 rounded-full relative">
-          <span className="absolute text-[0.75rem] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div className="flex items-center justify-center bg-yellow-400 size-3 rounded-full relative">
+          <span className="absolute text-[0.5rem] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
             👑
           </span>
         </div>
