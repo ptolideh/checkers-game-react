@@ -77,25 +77,25 @@ const shouldJump = (game: Square[][]) => {
   const jumps: string[] = [];
   game.forEach((row) => {
     row.forEach((col) => {
-      if (col.piece?.color === 'black') {
+      if (col.piece?.color === 'red') {
         const adjacentSquare1 = game[col.y + 1]?.[col.x + 1] ?? null;
         const adjacentSquare2 = game[col.y + 1]?.[col.x - 1] ?? null;
-        if (adjacentSquare1?.piece?.color === 'red') {
+        if (adjacentSquare1?.piece?.color === 'black') {
           const adjacentSquare3 = game[col.y + 2]?.[col.x + 2] ?? null;
           if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
         }
-        if (adjacentSquare2?.piece?.color === 'red') {
+        if (adjacentSquare2?.piece?.color === 'black') {
           const adjacentSquare3 = game[col.y + 2]?.[col.x - 2] ?? null;
           if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
         }
-      } else if (col.piece?.color === 'red') {
+      } else if (col.piece?.color === 'black') {
         const adjacentSquare1 = game[col.y - 1]?.[col.x + 1] ?? null;
         const adjacentSquare2 = game[col.y - 1]?.[col.x - 1] ?? null;
-        if (adjacentSquare1?.piece?.color === 'black') {
+        if (adjacentSquare1?.piece?.color === 'red') {
           const adjacentSquare3 = game[col.y - 2]?.[col.x + 2] ?? null;
           if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
         }
-        if (adjacentSquare2?.piece?.color === 'black') {
+        if (adjacentSquare2?.piece?.color === 'red') {
           const adjacentSquare3 = game[col.y - 2]?.[col.x - 2] ?? null;
           if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
         }
