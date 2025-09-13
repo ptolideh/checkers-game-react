@@ -58,21 +58,42 @@ export const App: React.FC = () => {
       <h1>Checkers Game</h1>
       <div className="flex flex-col border border-black w-fit">
         {state.game.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex border-t-black border-b-black">
+          <div key={rowIndex} className="flex border-t-black border-b-black items-center">
             {row.map((square, columnIndex) => (
               <div
                 key={columnIndex}
                 className={cn(
-                  'border border-l-black border-r-black size-8',
+                  'border border-l-black border-r-black size-10 flex justify-center items-center',
                   square.color === 'dark' ? 'bg-orange-900' : 'bg-orange-100',
                 )}
               >
-                {''}
+                {square.piece ? <Piece {...square.piece} /> : ''}
               </div>
             ))}
           </div>
         ))}
       </div>
+    </div>
+  );
+};
+
+const Piece: React.FC<Piece> = ({ color, isKing }) => {
+  return (
+    <div
+      className={cn(
+        'rounded-full size-6 flex justify-center items-center',
+        color === 'black' ? 'bg-black' : 'bg-red-600',
+      )}
+    >
+      {isKing ? (
+        <div className="flex items-center justify-center bg-white size-4 rounded-full relative">
+          <span className="absolute text-[0.75rem] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            👑
+          </span>
+        </div>
+      ) : (
+        ''
+      )}
     </div>
   );
 };
