@@ -1,6 +1,8 @@
 import { cn } from '@/lib/utils';
 import { useReducer, useState } from 'react';
 
+const getKeyFromCoordinates = (x: number, y: number) => `${x}:${y}`;
+
 const calculateValidMoves = (game: Square[][], square: Square) => {
   const validNextMoves = [];
   if (square.piece?.isKing) {
@@ -9,10 +11,16 @@ const calculateValidMoves = (game: Square[][], square: Square) => {
       const validNextSquare1 = game[square.y + 1][square.x + 1];
       const validNextSquare2 = game[square.y + 1][square.x - 1];
       if (validNextSquare1?.piece === null)
-        validNextMoves.push(`${validNextSquare1.x}:${validNextSquare1.y}`);
+        validNextMoves.push(getKeyFromCoordinates(validNextSquare1.x, validNextSquare1.y));
       if (validNextSquare2?.piece === null)
-        validNextMoves.push(`${validNextSquare2.x}:${validNextSquare2.y}`);
+        validNextMoves.push(getKeyFromCoordinates(validNextSquare2.x, validNextSquare2.y));
     } else {
+      const validNextSquare1 = game[square.y - 1][square.x + 1];
+      const validNextSquare2 = game[square.y - 1][square.x - 1];
+      if (validNextSquare1?.piece === null)
+        validNextMoves.push(getKeyFromCoordinates(validNextSquare1.x, validNextSquare1.y));
+      if (validNextSquare2?.piece === null)
+        validNextMoves.push(getKeyFromCoordinates(validNextSquare2.x, validNextSquare2.y));
     }
   }
   return validNextMoves;
@@ -95,7 +103,9 @@ export const App: React.FC = () => {
                   'border border-l-black border-r-black size-10 flex justify-center items-center',
                   square.color === 'dark' ? 'bg-orange-900' : 'bg-orange-100',
                   {
-                    'bg-green-300': state.validMoves.includes(`${square.x}:${square.y}`),
+                    'bg-green-300': state.validMoves.includes(
+                      getKeyFromCoordinates(square.x, square.y),
+                    ),
                   },
                 )}
                 onClick={() => {
