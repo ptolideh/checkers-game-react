@@ -1,6 +1,23 @@
 import { cn } from '@/lib/utils';
 import { useReducer, useState } from 'react';
 
+const calculateValidMoves = (game: Square[][], square: Square) => {
+  const validNextMoves = [];
+  if (square.piece?.isKing) {
+  } else {
+    if (square.piece?.color === 'red') {
+      const validNextSquare1 = game[square.y + 1][square.x + 1];
+      const validNextSquare2 = game[square.y + 1][square.x - 1];
+      if (validNextSquare1?.piece === null)
+        validNextMoves.push(`${validNextSquare1.x}:${validNextSquare1.y}`);
+      if (validNextSquare2?.piece === null)
+        validNextMoves.push(`${validNextSquare2.x}:${validNextSquare2.y}`);
+    } else {
+    }
+  }
+  return validNextMoves;
+};
+
 type Piece = {
   color: 'red' | 'black';
   isKing: boolean;
@@ -15,6 +32,7 @@ type Square = {
 
 interface State {
   selectedSquare: Square | null;
+  validMoves: string[];
   game: Square[][];
 }
 
@@ -44,6 +62,7 @@ const getInitialGameState = () => {
 
 const initialState = {
   selectedSquare: null,
+  validMoves: [],
   game: getInitialGameState(),
 };
 
@@ -52,6 +71,7 @@ function reducer(state: State, action: Action): State {
     case 'SELECT_PIECE':
       return {
         ...state,
+        validMoves: calculateValidMoves(state.game, action.payload),
         selectedSquare: action.payload,
       };
     default:
@@ -74,6 +94,9 @@ export const App: React.FC = () => {
                 className={cn(
                   'border border-l-black border-r-black size-10 flex justify-center items-center',
                   square.color === 'dark' ? 'bg-orange-900' : 'bg-orange-100',
+                  {
+                    'bg-green-300': state.validMoves.includes(`${square.x}:${square.y}`),
+                  },
                 )}
                 onClick={() => {
                   if (!square.piece) return;
