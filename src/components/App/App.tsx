@@ -8,22 +8,104 @@ const calculateValidMoves = (game: Square[][], square: Square) => {
   if (square.piece?.isKing) {
   } else {
     if (square.piece?.color === 'red') {
-      const validNextSquare1 = game[square.y + 1][square.x + 1];
-      const validNextSquare2 = game[square.y + 1][square.x - 1];
-      if (validNextSquare1?.piece === null)
-        validNextMoves.push(getKeyFromCoordinates(validNextSquare1.x, validNextSquare1.y));
-      if (validNextSquare2?.piece === null)
-        validNextMoves.push(getKeyFromCoordinates(validNextSquare2.x, validNextSquare2.y));
+      const nextMove1 = game[square.y + 1][square.x + 1];
+      const nextMove2 = game[square.y + 1][square.x - 1];
+      if (nextMove1?.piece === null)
+        validNextMoves.push(getKeyFromCoordinates(nextMove1.x, nextMove1.y));
+
+      if (nextMove2?.piece === null)
+        validNextMoves.push(getKeyFromCoordinates(nextMove2.x, nextMove2.y));
     } else {
-      const validNextSquare1 = game[square.y - 1][square.x + 1];
-      const validNextSquare2 = game[square.y - 1][square.x - 1];
-      if (validNextSquare1?.piece === null)
-        validNextMoves.push(getKeyFromCoordinates(validNextSquare1.x, validNextSquare1.y));
-      if (validNextSquare2?.piece === null)
-        validNextMoves.push(getKeyFromCoordinates(validNextSquare2.x, validNextSquare2.y));
+      const nextMove1 = game[square.y - 1][square.x + 1];
+      const nextMove2 = game[square.y - 1][square.x - 1];
+      if (nextMove1?.piece === null) {
+        validNextMoves.push(getKeyFromCoordinates(nextMove1.x, nextMove1.y));
+      }
+      if (nextMove2?.piece === null) {
+        validNextMoves.push(getKeyFromCoordinates(nextMove2.x, nextMove2.y));
+      }
     }
   }
   return validNextMoves;
+};
+
+// const calculateValidMoves = (game: Square[][], square: Square) => {
+//   const validNextMoves = [];
+//   if (square.piece?.isKing) {
+//   } else {
+//     if (square.piece?.color === 'red') {
+//       const nextMove1 = game[square.y + 1][square.x + 1];
+//       const nextMove2 = game[square.y + 1][square.x - 1];
+//       if (nextMove1?.piece === null)
+//         validNextMoves.push(getKeyFromCoordinates(nextMove1.x, nextMove1.y));
+//       else {
+//         const nextMove3 = game[square.y + 2][square.x + 2];
+//         if (nextMove3?.piece === null && nextMove1?.piece.color !== 'red')
+//           validNextMoves.push(getKeyFromCoordinates(nextMove3.x, nextMove3.y));
+//       }
+
+//       if (nextMove2?.piece === null) {
+//         validNextMoves.push(getKeyFromCoordinates(nextMove2.x, nextMove2.y));
+//       } else {
+//         const nextMove4 = game[square.y + 2][square.x - 2];
+//         if (nextMove4?.piece === null && nextMove2?.piece.color !== 'red')
+//           validNextMoves.push(getKeyFromCoordinates(nextMove4.x, nextMove4.y));
+//       }
+//     } else {
+//       const nextMove1 = game[square.y - 1][square.x + 1];
+//       const nextMove2 = game[square.y - 1][square.x - 1];
+//       if (nextMove1?.piece === null) {
+//         validNextMoves.push(getKeyFromCoordinates(nextMove1.x, nextMove1.y));
+//       } else {
+//         const nextMove3 = game[square.y - 2][square.x + 2];
+//         if (nextMove3?.piece === null && nextMove1?.piece.color !== 'black')
+//           validNextMoves.push(getKeyFromCoordinates(nextMove3.x, nextMove3.y));
+//       }
+//       if (nextMove2?.piece === null) {
+//         validNextMoves.push(getKeyFromCoordinates(nextMove2.x, nextMove2.y));
+//       } else {
+//         const nextMove4 = game[square.y - 2][square.x - 2];
+//         if (nextMove4?.piece === null && nextMove2?.piece.color !== 'black')
+//           validNextMoves.push(getKeyFromCoordinates(nextMove4.x, nextMove4.y));
+//       }
+//     }
+//   }
+//   return validNextMoves;
+// };
+
+const shouldJump = (game: Square[][], square: Square) => {
+  const jumps: string[] = [];
+  if (square.piece?.isKing) {
+  } else {
+    game.forEach((row) => {
+      row.forEach((col) => {
+        if (col.piece?.color === 'black') {
+          const adjacentSquare1 = game[col.y + 1]?.[col.x + 1] ?? null;
+          const adjacentSquare2 = game[col.y + 1]?.[col.x - 1] ?? null;
+          if (adjacentSquare1?.piece?.color === 'red') {
+            const adjacentSquare3 = game[col.y + 2]?.[col.x + 2] ?? null;
+            if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
+          }
+          if (adjacentSquare2?.piece?.color === 'red') {
+            const adjacentSquare3 = game[col.y + 2]?.[col.x - 2] ?? null;
+            if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
+          }
+        } else if (col.piece?.color === 'red') {
+          const adjacentSquare1 = game[col.y - 1]?.[col.x + 1] ?? null;
+          const adjacentSquare2 = game[col.y - 1]?.[col.x - 1] ?? null;
+          if (adjacentSquare1?.piece?.color === 'black') {
+            const adjacentSquare3 = game[col.y - 2]?.[col.x + 2] ?? null;
+            if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
+          }
+          if (adjacentSquare2?.piece?.color === 'black') {
+            const adjacentSquare3 = game[col.y - 2]?.[col.x - 2] ?? null;
+            if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
+          }
+        }
+      });
+    });
+  }
+  return jumps;
 };
 
 const isSelected = (square: Square, selectedSquare: Square | null) => {
@@ -84,11 +166,23 @@ const initialState = {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SELECT_PIECE':
-      return {
-        ...state,
-        validMoves: calculateValidMoves(state.game, action.payload),
-        selectedSquare: { ...action.payload },
-      };
+      const jumps = shouldJump(state.game, action.payload);
+      console.log({ jumps });
+      if (jumps.length > 0) {
+        if (jumps.includes(getKeyFromCoordinates(action.payload.x, action.payload.y))) {
+          return {
+            ...state,
+            selectedSquare: { ...action.payload },
+          };
+        }
+        return state;
+      } else {
+        return {
+          ...state,
+          validMoves: calculateValidMoves(state.game, action.payload),
+          selectedSquare: { ...action.payload },
+        };
+      }
     case 'DESELECT_PIECE':
       return {
         ...state,
@@ -115,6 +209,7 @@ function reducer(state: State, action: Action): State {
 
 export const App: React.FC = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
+  console.log(state);
 
   return (
     <div>
