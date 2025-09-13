@@ -73,38 +73,36 @@ const calculateValidMoves = (game: Square[][], square: Square) => {
 //   return validNextMoves;
 // };
 
-const shouldJump = (game: Square[][], square: Square) => {
+const shouldJump = (game: Square[][]) => {
   const jumps: string[] = [];
-  if (square.piece?.isKing) {
-  } else {
-    game.forEach((row) => {
-      row.forEach((col) => {
-        if (col.piece?.color === 'black') {
-          const adjacentSquare1 = game[col.y + 1]?.[col.x + 1] ?? null;
-          const adjacentSquare2 = game[col.y + 1]?.[col.x - 1] ?? null;
-          if (adjacentSquare1?.piece?.color === 'red') {
-            const adjacentSquare3 = game[col.y + 2]?.[col.x + 2] ?? null;
-            if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
-          }
-          if (adjacentSquare2?.piece?.color === 'red') {
-            const adjacentSquare3 = game[col.y + 2]?.[col.x - 2] ?? null;
-            if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
-          }
-        } else if (col.piece?.color === 'red') {
-          const adjacentSquare1 = game[col.y - 1]?.[col.x + 1] ?? null;
-          const adjacentSquare2 = game[col.y - 1]?.[col.x - 1] ?? null;
-          if (adjacentSquare1?.piece?.color === 'black') {
-            const adjacentSquare3 = game[col.y - 2]?.[col.x + 2] ?? null;
-            if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
-          }
-          if (adjacentSquare2?.piece?.color === 'black') {
-            const adjacentSquare3 = game[col.y - 2]?.[col.x - 2] ?? null;
-            if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
-          }
+  game.forEach((row) => {
+    row.forEach((col) => {
+      if (col.piece?.color === 'black') {
+        const adjacentSquare1 = game[col.y + 1]?.[col.x + 1] ?? null;
+        const adjacentSquare2 = game[col.y + 1]?.[col.x - 1] ?? null;
+        if (adjacentSquare1?.piece?.color === 'red') {
+          const adjacentSquare3 = game[col.y + 2]?.[col.x + 2] ?? null;
+          if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
         }
-      });
+        if (adjacentSquare2?.piece?.color === 'red') {
+          const adjacentSquare3 = game[col.y + 2]?.[col.x - 2] ?? null;
+          if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
+        }
+      } else if (col.piece?.color === 'red') {
+        const adjacentSquare1 = game[col.y - 1]?.[col.x + 1] ?? null;
+        const adjacentSquare2 = game[col.y - 1]?.[col.x - 1] ?? null;
+        if (adjacentSquare1?.piece?.color === 'black') {
+          const adjacentSquare3 = game[col.y - 2]?.[col.x + 2] ?? null;
+          if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
+        }
+        if (adjacentSquare2?.piece?.color === 'black') {
+          const adjacentSquare3 = game[col.y - 2]?.[col.x - 2] ?? null;
+          if (adjacentSquare3?.piece === null) jumps.push(getKeyFromCoordinates(col.x, col.y));
+        }
+      }
     });
-  }
+  });
+
   return jumps;
 };
 
@@ -127,6 +125,7 @@ type Square = {
 interface State {
   selectedSquare: Square | null;
   validMoves: string[];
+  jumps: string[];
   game: Square[][];
 }
 
@@ -160,16 +159,16 @@ const getInitialGameState = () => {
 const initialState = {
   selectedSquare: null,
   validMoves: [],
+  jumps: [],
   game: getInitialGameState(),
 };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SELECT_PIECE':
-      const jumps = shouldJump(state.game, action.payload);
-      console.log({ jumps });
-      if (jumps.length > 0) {
-        if (jumps.includes(getKeyFromCoordinates(action.payload.x, action.payload.y))) {
+      console.log({ jumps: state.jumps });
+      if (state.jumps.length > 0) {
+        if (state.jumps.includes(getKeyFromCoordinates(action.payload.x, action.payload.y))) {
           return {
             ...state,
             selectedSquare: { ...action.payload },
@@ -200,6 +199,8 @@ function reducer(state: State, action: Action): State {
         nextState.selectedSquare = null;
         nextState.validMoves = [];
       }
+      const jumps = shouldJump(nextState.game);
+      nextState.jumps = [...jumps];
 
       return nextState;
     default:
