@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { useReducer, useState } from 'react';
+import { useReducer } from 'react';
 
 const getKeyFromCoordinates = (x: number, y: number) => `${x}:${y}`;
 
@@ -89,13 +89,16 @@ interface State {
   selectedSquare: Square | null;
   validMoves: string[];
   jumps: string[];
+  mode: 'pvp' | 'pvc' | null;
+  currentPlayer: 'red' | 'black' | null;
   game: Square[][];
 }
 
 type Action =
   | { type: 'SELECT_PIECE'; payload: Square }
   | { type: 'DESELECT_PIECE' }
-  | { type: 'MOVE_PIECE'; payload: Square };
+  | { type: 'MOVE_PIECE'; payload: Square }
+  | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' };
 
 const getInitialGameState = () => {
   const game: Square[][] = Array.from({ length: 8 }, () =>
@@ -119,10 +122,12 @@ const getInitialGameState = () => {
   return game;
 };
 
-const initialState = {
+const initialState: State = {
   selectedSquare: null,
   validMoves: [],
   jumps: [],
+  mode: null,
+  currentPlayer: null,
   game: getInitialGameState(),
 };
 
@@ -166,6 +171,11 @@ function reducer(state: State, action: Action): State {
       nextState.jumps = [...jumps];
 
       return nextState;
+    case 'SET_MODE':
+      return {
+        ...state,
+        mode: action.payload,
+      };
     default:
       return state;
   }
@@ -175,9 +185,32 @@ export const App: React.FC = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
   console.log(state);
 
+  // Game mode selection
+  if (!state.mode) {
+    return (
+      <div className="p-4">
+        <h1 className="text-xl font-semibold mb-4">Checkers Game</h1>
+        <p className="mb-2">Choose a mode to start:</p>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-1 rounded border border-black hover:bg-gray-100"
+            onClick={() => dispatch({ type: 'SET_MODE', payload: 'pvp' })}
+          >
+            Two Players
+          </button>
+          <button
+            className="px-3 py-1 rounded border border-black hover:bg-gray-100"
+            onClick={() => dispatch({ type: 'SET_MODE', payload: 'pvc' })}
+          >
+            Single Player
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h1>Checkers Game</h1>
       <div className="flex flex-col border border-black w-fit">
         {state.game.map((row, rowIndex) => (
           <div key={rowIndex} className="flex border-t-black border-b-black items-center">
