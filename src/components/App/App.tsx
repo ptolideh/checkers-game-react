@@ -90,7 +90,6 @@ interface State {
   validMoves: string[];
   jumps: string[];
   mode: 'pvp' | 'pvc' | null;
-  playerColor: 'red' | 'black' | null;
   currentPlayer: 'red' | 'black' | null;
   game: Square[][];
 }
@@ -114,7 +113,6 @@ const initialState: State = {
   validMoves: [],
   jumps: [],
   mode: null,
-  playerColor: null,
   currentPlayer: null,
   game: getInitialGameState(),
 };
@@ -165,29 +163,6 @@ function reducer(state: State, action: Action): State {
         mode: action.payload,
         currentPlayer: null,
       };
-    case 'SET_PLAYER_COLOR': {
-      const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
-      for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-          const square = nextState.game[row][col];
-          square.x = col;
-          square.y = row;
-          if ((row + col) % 2 !== 0) {
-            square.color = 'dark';
-            if (row < 3) {
-              square.piece = { color: action.payload === 'red' ? 'black' : 'red', isKing: false };
-            } else if (row > 4) {
-              square.piece = { color: action.payload, isKing: false };
-            }
-          }
-        }
-      }
-      return {
-        ...state,
-        playerColor: action.payload,
-        currentPlayer: 'black',
-      };
-    }
     default:
       return state;
   }
@@ -221,30 +196,6 @@ export const App: React.FC = () => {
     );
   }
 
-  // Color selection after mode
-  if (state.mode && !state.playerColor) {
-    return (
-      <div className="p-4">
-        <h1 className="text-xl font-semibold mb-4">Checkers Game</h1>
-        <p className="mb-2">Choose your color:</p>
-        <div className="flex gap-2">
-          <button
-            className="px-3 py-1 rounded border border-black hover:bg-gray-100"
-            onClick={() => dispatch({ type: 'SET_PLAYER_COLOR', payload: 'red' })}
-          >
-            Red
-          </button>
-          <button
-            className="px-3 py-1 rounded border border-black hover:bg-gray-100"
-            onClick={() => dispatch({ type: 'SET_PLAYER_COLOR', payload: 'black' })}
-          >
-            Black
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="p-4">
       <h1 className="text-xl font-semibold mb-2">Checkers Game</h1>
@@ -252,7 +203,6 @@ export const App: React.FC = () => {
         <span className="mr-3">
           Mode: {state.mode === 'pvp' ? 'Two Players (PvP)' : 'Single Player (PvC)'}
         </span>
-        <span className="mr-3">You: {state.playerColor === 'red' ? 'Red' : 'Black'}</span>
         <span>Current: {state.currentPlayer === 'red' ? 'Red' : 'Black'}</span>
       </div>
       <div className="flex flex-col border border-black w-fit">
