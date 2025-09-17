@@ -3,30 +3,52 @@ import { useReducer } from 'react';
 
 const getKeyFromCoordinates = (x: number, y: number) => `${x}:${y}`;
 
-const calculateValidMoves = (game: Square[][], square: Square) => {
-  const validNextMoves = [];
-  if (square.piece?.isKing) {
-  } else {
-    if (square.piece?.color === 'red') {
-      const nextMove1 = game[square.y + 1][square.x + 1];
-      const nextMove2 = game[square.y + 1][square.x - 1];
-      if (nextMove1?.piece === null)
-        validNextMoves.push(getKeyFromCoordinates(nextMove1.x, nextMove1.y));
+const regularMoveOptions = {
+  red: [
+    [1, 1],
+    [1, -1],
+  ],
+  black: [
+    [-1, 1],
+    [-1, -1],
+  ],
+};
 
-      if (nextMove2?.piece === null)
-        validNextMoves.push(getKeyFromCoordinates(nextMove2.x, nextMove2.y));
-    } else {
-      const nextMove1 = game[square.y - 1][square.x + 1];
-      const nextMove2 = game[square.y - 1][square.x - 1];
-      if (nextMove1?.piece === null) {
-        validNextMoves.push(getKeyFromCoordinates(nextMove1.x, nextMove1.y));
-      }
-      if (nextMove2?.piece === null) {
-        validNextMoves.push(getKeyFromCoordinates(nextMove2.x, nextMove2.y));
-      }
+const kingMoveOptions = {
+  red: [...regularMoveOptions.red, [-1, 1], [-1, -1]],
+  black: [...regularMoveOptions.black, [1, 1], [1, -1]],
+};
+
+//A valid square must be inside the board
+const isMoveInBounds = (game: Square[][], y: number, x: number) => {
+  const row = game[y];
+  if (!row) return false;
+  const target = row[x];
+  return Boolean(target);
+};
+
+//A valid move target must be inside the board and empty
+const isValidMove = (game: Square[][], y: number, x: number) => {
+  return isMoveInBounds(game, y, x) && game[y][x].piece === null;
+};
+
+const calculateValidMoves = (game: Square[][], square: Square) => {
+  const piece = square.piece;
+  if (!piece) return [] as string[];
+
+  const movementOptions = piece.isKing
+    ? kingMoveOptions[piece.color]
+    : regularMoveOptions[piece.color];
+
+  return movementOptions.reduce((moves, option) => {
+    const [rowMovement, colMovement] = option;
+    const nextY = square.y + rowMovement;
+    const nextX = square.x + colMovement;
+    if (isValidMove(game, nextY, nextX)) {
+      return [...moves, getKeyFromCoordinates(nextX, nextY)];
     }
-  }
-  return validNextMoves;
+    return moves;
+  }, [] as string[]);
 };
 
 const calculateValidJumps = (game: Square[][], square: Square) => {
@@ -105,6 +127,18 @@ const getInitialGameState = () => {
   const game: Square[][] = Array.from({ length: 8 }, () =>
     Array.from({ length: 8 }, () => ({ x: 0, y: 0, color: 'light', piece: null })),
   );
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const s = game[row][col];
+      s.x = col;
+      s.y = row;
+      if ((row + col) % 2 !== 0) {
+        s.color = 'dark';
+        if (row < 3) s.piece = { color: 'red', isKing: false };
+        else if (row > 4) s.piece = { color: 'black', isKing: false };
+      }
+    }
+  }
   return game;
 };
 
@@ -121,21 +155,21 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SELECT_PIECE':
       console.log({ jumps: state.jumps });
-      if (state.jumps.length > 0) {
-        if (state.jumps.includes(getKeyFromCoordinates(action.payload.x, action.payload.y))) {
-          return {
-            ...state,
-            selectedSquare: { ...action.payload },
-          };
-        }
-        return state;
-      } else {
-        return {
-          ...state,
-          validMoves: calculateValidMoves(state.game, action.payload),
-          selectedSquare: { ...action.payload },
-        };
-      }
+      return {
+        ...state,
+        validMoves: calculateValidMoves(state.game, action.payload),
+        selectedSquare: { ...action.payload },
+      };
+    // if (state.jumps.length > 0) {
+    //   if (state.jumps.includes(getKeyFromCoordinates(action.payload.x, action.payload.y))) {
+    //     return {
+    //       ...state,
+    //       selectedSquare: { ...action.payload },
+    //     };
+    //   }
+    //   return state;
+    // } else {
+    // }
     case 'DESELECT_PIECE':
       return {
         ...state,
