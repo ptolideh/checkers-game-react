@@ -90,6 +90,7 @@ interface State {
   validMoves: string[];
   jumps: string[];
   mode: 'pvp' | 'pvc' | null;
+  playerColor: 'red' | 'black' | null;
   currentPlayer: 'red' | 'black' | null;
   game: Square[][];
 }
@@ -98,27 +99,13 @@ type Action =
   | { type: 'SELECT_PIECE'; payload: Square }
   | { type: 'DESELECT_PIECE' }
   | { type: 'MOVE_PIECE'; payload: Square }
-  | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' };
+  | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' }
+  | { type: 'SET_PLAYER_COLOR'; payload: 'red' | 'black' };
 
 const getInitialGameState = () => {
   const game: Square[][] = Array.from({ length: 8 }, () =>
     Array.from({ length: 8 }, () => ({ x: 0, y: 0, color: 'light', piece: null })),
   );
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const square = game[row][col];
-      square.x = col;
-      square.y = row;
-      if ((row + col) % 2 !== 0) {
-        square.color = 'dark';
-        if (row < 3) {
-          square.piece = { color: 'red', isKing: false };
-        } else if (row > 4) {
-          square.piece = { color: 'black', isKing: false };
-        }
-      }
-    }
-  }
   return game;
 };
 
@@ -127,6 +114,7 @@ const initialState: State = {
   validMoves: [],
   jumps: [],
   mode: null,
+  playerColor: null,
   currentPlayer: null,
   game: getInitialGameState(),
 };
@@ -175,7 +163,31 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         mode: action.payload,
+        currentPlayer: null,
       };
+    case 'SET_PLAYER_COLOR': {
+      const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          const square = nextState.game[row][col];
+          square.x = col;
+          square.y = row;
+          if ((row + col) % 2 !== 0) {
+            square.color = 'dark';
+            if (row < 3) {
+              square.piece = { color: action.payload === 'red' ? 'black' : 'red', isKing: false };
+            } else if (row > 4) {
+              square.piece = { color: action.payload, isKing: false };
+            }
+          }
+        }
+      }
+      return {
+        ...state,
+        playerColor: action.payload,
+        currentPlayer: 'black',
+      };
+    }
     default:
       return state;
   }
@@ -196,13 +208,37 @@ export const App: React.FC = () => {
             className="px-3 py-1 rounded border border-black hover:bg-gray-100"
             onClick={() => dispatch({ type: 'SET_MODE', payload: 'pvp' })}
           >
-            Two Players
+            Two Players (PvP)
           </button>
           <button
             className="px-3 py-1 rounded border border-black hover:bg-gray-100"
             onClick={() => dispatch({ type: 'SET_MODE', payload: 'pvc' })}
           >
-            Single Player
+            Single Player (PvC)
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Color selection after mode
+  if (state.mode && !state.playerColor) {
+    return (
+      <div className="p-4">
+        <h1 className="text-xl font-semibold mb-4">Checkers Game</h1>
+        <p className="mb-2">Choose your color:</p>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-1 rounded border border-black hover:bg-gray-100"
+            onClick={() => dispatch({ type: 'SET_PLAYER_COLOR', payload: 'red' })}
+          >
+            Red
+          </button>
+          <button
+            className="px-3 py-1 rounded border border-black hover:bg-gray-100"
+            onClick={() => dispatch({ type: 'SET_PLAYER_COLOR', payload: 'black' })}
+          >
+            Black
           </button>
         </div>
       </div>
@@ -210,7 +246,15 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div>
+    <div className="p-4">
+      <h1 className="text-xl font-semibold mb-2">Checkers Game</h1>
+      <div className="text-sm mb-4">
+        <span className="mr-3">
+          Mode: {state.mode === 'pvp' ? 'Two Players (PvP)' : 'Single Player (PvC)'}
+        </span>
+        <span className="mr-3">You: {state.playerColor === 'red' ? 'Red' : 'Black'}</span>
+        <span>Current: {state.currentPlayer === 'red' ? 'Red' : 'Black'}</span>
+      </div>
       <div className="flex flex-col border border-black w-fit">
         {state.game.map((row, rowIndex) => (
           <div key={rowIndex} className="flex border-t-black border-b-black items-center">
