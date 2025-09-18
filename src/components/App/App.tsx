@@ -28,7 +28,7 @@ const isMoveInBounds = (game: Square[][], y: number, x: number): boolean => {
 };
 
 //A valid move target must be inside the board and empty
-const isValidLocation = (game: Square[][], y: number, x: number): boolean => {
+const isValidLandingPos = (game: Square[][], y: number, x: number): boolean => {
   return isMoveInBounds(game, y, x) && game[y][x].piece === null && game[y][x].color === 'dark';
 };
 
@@ -59,7 +59,7 @@ const getSimpleMovesPerPiece = (game: Square[][], square: Square) => {
     const nextY = square.y + rowMovement;
     const nextX = square.x + colMovement;
 
-    if (isValidLocation(game, nextY, nextX)) {
+    if (isValidLandingPos(game, nextY, nextX)) {
       moveOptions.push(getKeyFromCoordinates(nextX, nextY));
     }
   });
@@ -67,31 +67,40 @@ const getSimpleMovesPerPiece = (game: Square[][], square: Square) => {
   return moveOptions;
 };
 
-const getValidCapturesPerPiece = (game: Square[][], square: Square) => {
+type CaptureOption = {
+  capturePos: string;
+  landingPos: string;
+};
+
+const getValidCapturesPerPiece = (game: Square[][], square: Square): CaptureOption[] => {
   const piece = square.piece;
-  if (!piece) return [] as string[];
+  if (!piece) return [];
 
   const movementOptions = piece.isKing
     ? kingMoveOptions[piece.color]
     : regularMoveOptions[piece.color];
 
-  const captures: string[] = [];
-
-  movementOptions.forEach((option) => {
+  return movementOptions.reduce<CaptureOption[]>((acc, option) => {
     const [rowMovement, colMovement] = option;
     const nextY = square.y + rowMovement;
     const nextX = square.x + colMovement;
     const jumpY = square.y + rowMovement * 2;
     const jumpX = square.x + colMovement * 2;
-    if (isMoveInBounds(game, jumpY, jumpX)) {
-      const isJumpAvailable = isValidLocation(game, jumpY, jumpX);
-      if (isNextOpponent(square, game[nextY][nextX]) && isJumpAvailable) {
-        captures.push(getKeyFromCoordinates(nextX, nextY));
-      }
-    }
-  });
 
-  return captures;
+    if (!isMoveInBounds(game, nextY, nextX)) return acc;
+    if (!isMoveInBounds(game, jumpY, jumpX)) return acc;
+    if (!isValidLandingPos(game, jumpY, jumpX)) return acc;
+
+    const adjacentSquare = game[nextY][nextX];
+    if (!isNextOpponent(square, adjacentSquare)) return acc;
+
+    acc.push({
+      capturePos: getKeyFromCoordinates(nextX, nextY),
+      landingPos: getKeyFromCoordinates(jumpX, jumpY),
+    });
+
+    return acc;
+  }, []);
 };
 
 const mapAllMovesForCurrentPlayer = (game: Square[][], color: 'red' | 'black') => {
@@ -138,17 +147,20 @@ const isSelected = (square: Square, selectedSquare: Square | null) => {
   return square.x === selectedSquare?.x && square.y === selectedSquare?.y;
 };
 
-const isSelectablePiece = (square: Square) => {
-  return (
-    square.piece !== null && (square.piece.captures.length > 0 || square.piece.moves.length > 0)
-  );
+const isSelectablePiece = (square: Square, playerMustCapture: boolean) => {
+  if (!square.piece) return false;
+  if (playerMustCapture) {
+    return square.piece.captures.length > 0;
+  } else {
+    return square.piece.moves.length > 0;
+  }
 };
 
 type Piece = {
   color: 'red' | 'black';
   isKing: boolean;
   moves: string[];
-  captures: string[];
+  captures: CaptureOption[];
 };
 
 type Square = {
@@ -171,6 +183,7 @@ type Action =
   | { type: 'SELECT_PIECE'; payload: Square }
   | { type: 'DESELECT_PIECE' }
   | { type: 'MOVE_PIECE'; payload: Square }
+  | { type: 'CAPTURE_PIECE'; payload: Square }
   | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' }
   | { type: 'SET_PLAYER_COLOR'; payload: 'red' | 'black' };
 
@@ -204,12 +217,32 @@ const initialState: State = {
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'SELECT_PIECE':
+    case 'SELECT_PIECE': {
+      if (!isSelectablePiece(action.payload, state.mustCapture)) return state;
+
+      const nextSelectedSquare = {
+        ...action.payload,
+        piece: {
+          ...(action.payload.piece as Piece),
+        },
+      };
+
+      if (nextSelectedSquare.piece.captures.length > 0) {
+        const updatedMoves = [] as string[];
+
+        nextSelectedSquare.piece.captures.forEach((captureOption) => {
+          updatedMoves.push(captureOption.landingPos);
+        });
+
+        nextSelectedSquare.piece.moves = Array.from(updatedMoves);
+      }
+
       return {
         ...state,
-        // validMoves: getValidMoves(state.game, action.payload),
-        selectedSquare: { ...action.payload },
+        selectedSquare: nextSelectedSquare,
       };
+    }
+
     // if (state.jumps.length > 0) {
     //   if (state.jumps.includes(getKeyFromCoordinates(action.payload.x, action.payload.y))) {
     //     return {
@@ -226,7 +259,9 @@ function reducer(state: State, action: Action): State {
         validMoves: [],
         selectedSquare: null,
       };
-    case 'MOVE_PIECE':
+
+    case 'MOVE_PIECE': {
+      if (!state.selectedSquare || state.mustCapture) return state;
       const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
       let currentPlayer = state.currentPlayer;
       if (state.selectedSquare) {
@@ -239,24 +274,49 @@ function reducer(state: State, action: Action): State {
         nextState.validMoves = [];
       }
 
+      currentPlayer = state.currentPlayer === 'red' ? 'black' : 'red';
+
+      nextState.game = mapAllMovesForCurrentPlayer(nextState.game, currentPlayer);
+
+      return {
+        ...nextState,
+        mustCapture: hasCaptures(nextState.game, currentPlayer),
+        currentPlayer,
+      };
+    }
+
+    case 'CAPTURE_PIECE': {
+      if (!state.selectedSquare || !state.mustCapture) return state;
+      let currentPlayer = state.currentPlayer;
+      const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
+      nextState.game[state.selectedSquare.y][state.selectedSquare.x].piece = null;
+      nextState.game[action.payload.y][action.payload.x].piece = Object.assign(
+        {},
+        state.selectedSquare.piece,
+      );
+      nextState.selectedSquare = null;
+      nextState.validMoves = [];
+
       if (
         getValidCapturesPerPiece(nextState.game, nextState.game[action.payload.y][action.payload.x])
           .length > 0
       ) {
-        nextState.mustCapture = true;
         return {
           ...nextState,
+          mustCapture: true,
           game: mapAllMovesForCurrentPlayer(nextState.game, currentPlayer),
         };
       }
 
       currentPlayer = state.currentPlayer === 'red' ? 'black' : 'red';
+      nextState.game = mapAllMovesForCurrentPlayer(nextState.game, currentPlayer);
 
       return {
         ...nextState,
-        game: mapAllMovesForCurrentPlayer(nextState.game, currentPlayer),
+        mustCapture: hasCaptures(nextState.game, currentPlayer),
         currentPlayer,
       };
+    }
 
     case 'SET_MODE':
       return {
@@ -316,27 +376,44 @@ export const App: React.FC = () => {
                   'border border-l-black border-r-black size-10 flex justify-center items-center',
                   square.color === 'dark' ? 'bg-orange-900' : 'bg-orange-100',
                   {
-                    'bg-green-300': state.selectedSquare?.piece?.moves.includes(
-                      getKeyFromCoordinates(square.x, square.y),
-                    ),
+                    'bg-green-300':
+                      state.selectedSquare?.piece?.moves.includes(
+                        getKeyFromCoordinates(square.x, square.y),
+                      ) ||
+                      state.selectedSquare?.piece?.captures.some(
+                        (capture) =>
+                          capture.landingPos === getKeyFromCoordinates(square.x, square.y),
+                      ),
                   },
                   {
                     'opacity-50':
-                      square.piece?.color === state.currentPlayer && !isSelectablePiece(square),
+                      square.piece?.color === state.currentPlayer &&
+                      !isSelectablePiece(square, state.mustCapture),
                   },
                 )}
                 onClick={() => {
                   if (isSelected(square, state.selectedSquare)) {
                     dispatch({ type: 'DESELECT_PIECE' });
-                  } else if (isSelectablePiece(square)) {
+                  } else if (isSelectablePiece(square, state.mustCapture)) {
                     dispatch({ type: 'SELECT_PIECE', payload: square });
                   } else if (
+                    !state.mustCapture &&
                     state.selectedSquare?.piece?.moves.includes(
                       getKeyFromCoordinates(square.x, square.y),
                     )
                   ) {
                     dispatch({
                       type: 'MOVE_PIECE',
+                      payload: square,
+                    });
+                  } else if (
+                    state.mustCapture &&
+                    state.selectedSquare?.piece?.captures.some(
+                      (capture) => capture.landingPos === getKeyFromCoordinates(square.x, square.y),
+                    )
+                  ) {
+                    dispatch({
+                      type: 'CAPTURE_PIECE',
                       payload: square,
                     });
                   }
