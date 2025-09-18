@@ -22,6 +22,13 @@ const kingMoveOptions = {
   black: [...regularMoveOptions.black, [1, 1], [1, -1]],
 };
 
+const shouldPromoteToKing = (piece: Piece, targetRow: number) => {
+  if (piece.isKing) return false;
+  if (piece.color === 'red' && targetRow === 7) return true;
+  if (piece.color === 'black' && targetRow === 0) return true;
+  return false;
+};
+
 //A valid square must be inside the board
 const isMoveInBounds = (game: Square[][], y: number, x: number): boolean => {
   const row = game[y];
@@ -248,27 +255,26 @@ function reducer(state: State, action: Action): State {
       };
 
     case 'MOVE_PIECE': {
-      if (!state.selectedSquare || state.mustCapture || !state.selectedSquare) return state;
+      if (!state.selectedSquare || state.mustCapture) return state;
       const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
 
       nextState.game[state.selectedSquare.y][state.selectedSquare.x].piece = null;
-      nextState.game[action.payload.y][action.payload.x].piece = Object.assign(
-        {},
-        state.selectedSquare.piece,
-      );
+      const movedPiece = Object.assign({}, state.selectedSquare.piece);
+      if (shouldPromoteToKing(movedPiece, action.payload.y)) {
+        movedPiece.isKing = true;
+      }
+      nextState.game[action.payload.y][action.payload.x].piece = movedPiece;
+
       nextState.selectedSquare = null;
       nextState.currentPlayer = state.currentPlayer === 'red' ? 'black' : 'red';
+      nextState.game = mapAllMovesForCurrentPlayer(nextState.game, nextState.currentPlayer);
+      nextState.mustCapture = hasCaptures(nextState.game, nextState.currentPlayer);
 
-      return {
-        ...nextState,
-        game: mapAllMovesForCurrentPlayer(nextState.game, nextState.currentPlayer),
-        mustCapture: hasCaptures(nextState.game, nextState.currentPlayer),
-      };
+      return nextState;
     }
 
     case 'CAPTURE_PIECE': {
       if (!state.selectedSquare || !state.mustCapture) return state;
-      let currentPlayer = state.currentPlayer;
       const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
       nextState.game[state.selectedSquare.y][state.selectedSquare.x].piece = null;
       nextState.game[action.payload.capturePos.y][action.payload.capturePos.x].piece = null;
@@ -285,18 +291,15 @@ function reducer(state: State, action: Action): State {
         return {
           ...nextState,
           mustCapture: true,
-          game: mapAllMovesForCurrentPlayer(nextState.game, currentPlayer),
+          game: mapAllMovesForCurrentPlayer(nextState.game, nextState.currentPlayer),
         };
       }
 
-      currentPlayer = state.currentPlayer === 'red' ? 'black' : 'red';
-      nextState.game = mapAllMovesForCurrentPlayer(nextState.game, currentPlayer);
+      nextState.currentPlayer = state.currentPlayer === 'red' ? 'black' : 'red';
+      nextState.game = mapAllMovesForCurrentPlayer(nextState.game, nextState.currentPlayer);
+      nextState.mustCapture = hasCaptures(nextState.game, nextState.currentPlayer);
 
-      return {
-        ...nextState,
-        mustCapture: hasCaptures(nextState.game, currentPlayer),
-        currentPlayer,
-      };
+      return nextState;
     }
 
     case 'SET_MODE':
