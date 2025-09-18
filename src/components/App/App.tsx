@@ -1,31 +1,75 @@
 import { cn } from '@/lib/utils';
+import { get } from 'http';
 import { useReducer } from 'react';
 
-const regularMoveOptions = {
-  red: [
-    [1, 1],
-    [1, -1],
-  ],
-  black: [
-    [-1, 1],
-    [-1, -1],
-  ],
-};
+enum PieceColor {
+  dark = 'darkPiece',
+  light = 'lightPiece',
+}
+
+enum SquareColor {
+  dark = 'darkPiece',
+  light = 'lightPiece',
+}
 
 type Position = {
   x: number;
   y: number;
 };
 
-const kingMoveOptions = {
-  red: [...regularMoveOptions.red, [-1, 1], [-1, -1]],
-  black: [...regularMoveOptions.black, [1, 1], [1, -1]],
+type CaptureOption = {
+  capturePos: Position;
+  landingPos: Position;
+};
+
+type Piece = {
+  color: PieceColor;
+  isKing: boolean;
+  moves: Position[];
+  captures: CaptureOption[];
+};
+
+type Square = Position & {
+  color: SquareColor;
+  piece: Piece | null;
+};
+
+interface State {
+  selectedSquare: Square | null;
+  mode: 'pvp' | 'pvc' | null;
+  currentPlayer: PieceColor;
+  mustCapture: boolean;
+  game: Square[][];
+}
+
+type Action =
+  | { type: 'SELECT_PIECE'; payload: Square }
+  | { type: 'DESELECT_PIECE' }
+  | { type: 'MOVE_PIECE'; payload: Square }
+  | { type: 'CAPTURE_PIECE'; payload: CaptureOption }
+  | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' }
+  | { type: 'SET_PLAYER_COLOR'; payload: PieceColor };
+
+const regularMoveOptions: Record<PieceColor, number[][]> = {
+  lightPiece: [
+    [1, 1],
+    [1, -1],
+  ],
+  darkPiece: [
+    [-1, 1],
+    [-1, -1],
+  ],
+};
+
+const kingMoveOptions: Record<PieceColor, number[][]> = {
+  lightPiece: [...regularMoveOptions.lightPiece, [-1, 1], [-1, -1]],
+  darkPiece: [...regularMoveOptions.darkPiece, [1, 1], [1, -1]],
 };
 
 const shouldPromoteToKing = (piece: Piece, targetRow: number) => {
   if (piece.isKing) return false;
-  if (piece.color === 'red' && targetRow === 7) return true;
-  if (piece.color === 'black' && targetRow === 0) return true;
+  if (piece.color === PieceColor.light && targetRow === 7) return true;
+  if (piece.color === PieceColor.dark && targetRow === 0) return true;
   return false;
 };
 
@@ -39,20 +83,26 @@ const isMoveInBounds = (game: Square[][], y: number, x: number): boolean => {
 
 //A valid move target must be inside the board and empty
 const isValidLandingPos = (game: Square[][], y: number, x: number): boolean => {
-  return isMoveInBounds(game, y, x) && game[y][x].piece === null && game[y][x].color === 'dark';
+  return (
+    isMoveInBounds(game, y, x) && game[y][x].piece === null && game[y][x].color === SquareColor.dark
+  );
 };
 
 const isNextOpponent = (current: Square, next: Square) => {
   return next.piece?.color && current.piece?.color !== next.piece?.color;
 };
 
-const hasCaptures = (game: Square[][], currentPlayer: 'red' | 'black') =>
+const hasCaptures = (game: Square[][], currentPlayer: PieceColor) =>
   game.some((row) =>
     row.some(
       (square) =>
         square.piece && square.piece.color === currentPlayer && square.piece.captures.length > 0,
     ),
   );
+
+const getNextPlayer = (currentPlayer: PieceColor) => {
+  return currentPlayer === PieceColor.light ? PieceColor.dark : PieceColor.light;
+};
 
 const getSimpleMovesPerPiece = (game: Square[][], square: Square) => {
   const piece = square.piece;
@@ -76,27 +126,6 @@ const getSimpleMovesPerPiece = (game: Square[][], square: Square) => {
 
     return acc;
   }, []);
-};
-
-//   movementOptions.forEach((option) => {
-//     const [rowMovement, colMovement] = option;
-//     const nextY = square.y + rowMovement;
-//     const nextX = square.x + colMovement;
-
-//     if (isValidLandingPos(game, nextY, nextX)) {
-//       moveOptions.push({
-//         x: nextX,
-//         y: nextY,
-//       });
-//     }
-//   });
-
-//   return moveOptions;
-// };
-
-type CaptureOption = {
-  capturePos: Position;
-  landingPos: Position;
 };
 
 const getValidCapturesPerPiece = (game: Square[][], square: Square): CaptureOption[] => {
@@ -130,7 +159,7 @@ const getValidCapturesPerPiece = (game: Square[][], square: Square): CaptureOpti
   }, []);
 };
 
-const mapAllMovesForCurrentPlayer = (game: Square[][], color: 'red' | 'black') => {
+const mapAllMovesForCurrentPlayer = (game: Square[][], color: PieceColor) => {
   return game.map((row) => {
     return row.map((square) => {
       if (!square.piece) return square;
@@ -183,37 +212,9 @@ const isSelectablePiece = (square: Square, playerMustCapture: boolean) => {
   }
 };
 
-type Piece = {
-  color: 'red' | 'black';
-  isKing: boolean;
-  moves: Position[];
-  captures: CaptureOption[];
-};
-
-type Square = Position & {
-  color: 'dark' | 'light';
-  piece: Piece | null;
-};
-
-interface State {
-  selectedSquare: Square | null;
-  mode: 'pvp' | 'pvc' | null;
-  currentPlayer: 'red' | 'black';
-  mustCapture: boolean;
-  game: Square[][];
-}
-
-type Action =
-  | { type: 'SELECT_PIECE'; payload: Square }
-  | { type: 'DESELECT_PIECE' }
-  | { type: 'MOVE_PIECE'; payload: Square }
-  | { type: 'CAPTURE_PIECE'; payload: CaptureOption }
-  | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' }
-  | { type: 'SET_PLAYER_COLOR'; payload: 'red' | 'black' };
-
 const getInitialGameState = () => {
   const game: Square[][] = Array.from({ length: 8 }, () =>
-    Array.from({ length: 8 }, () => ({ x: 0, y: 0, color: 'light', piece: null })),
+    Array.from({ length: 8 }, () => ({ x: 0, y: 0, color: SquareColor.light, piece: null })),
   );
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
@@ -221,9 +222,10 @@ const getInitialGameState = () => {
       s.x = col;
       s.y = row;
       if ((row + col) % 2 !== 0) {
-        s.color = 'dark';
-        if (row < 3) s.piece = { color: 'red', isKing: false, moves: [], captures: [] };
-        else if (row > 4) s.piece = { color: 'black', isKing: false, moves: [], captures: [] };
+        s.color = SquareColor.dark;
+        if (row < 3) s.piece = { color: PieceColor.light, isKing: false, moves: [], captures: [] };
+        else if (row > 4)
+          s.piece = { color: PieceColor.dark, isKing: false, moves: [], captures: [] };
       }
     }
   }
@@ -233,7 +235,7 @@ const getInitialGameState = () => {
 const initialState: State = {
   selectedSquare: null,
   mode: null,
-  currentPlayer: 'black',
+  currentPlayer: PieceColor.dark,
   mustCapture: false,
   game: getInitialGameState(),
 };
@@ -266,7 +268,7 @@ function reducer(state: State, action: Action): State {
       nextState.game[action.payload.y][action.payload.x].piece = movedPiece;
 
       nextState.selectedSquare = null;
-      nextState.currentPlayer = state.currentPlayer === 'red' ? 'black' : 'red';
+      nextState.currentPlayer = getNextPlayer(state.currentPlayer);
       nextState.game = mapAllMovesForCurrentPlayer(nextState.game, nextState.currentPlayer);
       nextState.mustCapture = hasCaptures(nextState.game, nextState.currentPlayer);
 
@@ -295,7 +297,7 @@ function reducer(state: State, action: Action): State {
         };
       }
 
-      nextState.currentPlayer = state.currentPlayer === 'red' ? 'black' : 'red';
+      nextState.currentPlayer = getNextPlayer(state.currentPlayer);
       nextState.game = mapAllMovesForCurrentPlayer(nextState.game, nextState.currentPlayer);
       nextState.mustCapture = hasCaptures(nextState.game, nextState.currentPlayer);
 
@@ -348,7 +350,7 @@ export const App: React.FC = () => {
         <span className="mr-3">
           Mode: {state.mode === 'pvp' ? 'Two Players (PvP)' : 'Single Player (PvC)'}
         </span>
-        <span>Current: {state.currentPlayer === 'red' ? 'Red' : 'Black'}</span>
+        <span>Current: {state.currentPlayer === PieceColor.light ? 'Red' : 'Black'}</span>
       </div>
       <div className="flex flex-col border border-black w-fit">
         {state.game.map((row, rowIndex) => (
@@ -358,7 +360,7 @@ export const App: React.FC = () => {
                 key={columnIndex}
                 className={cn(
                   'border border-l-black border-r-black size-10 flex justify-center items-center',
-                  square.color === 'dark' ? 'bg-orange-900' : 'bg-orange-100',
+                  square.color === SquareColor.dark ? 'bg-orange-900' : 'bg-orange-100',
                   {
                     'bg-green-300':
                       state.selectedSquare?.piece?.moves.some(
@@ -423,8 +425,8 @@ const Piece: React.FC<Piece & { isSelected?: boolean }> = ({ color, isKing, isSe
     <div
       className={cn(
         'rounded-full size-6 flex justify-center items-center border-2',
-        color === 'black' ? 'bg-black' : 'bg-red-600',
-        color === 'black' ? 'border-black' : 'border-red-600',
+        color === PieceColor.dark ? 'bg-black' : 'bg-red-600',
+        color === PieceColor.dark ? 'border-black' : 'border-red-600',
         { 'border-green-300': isSelected },
       )}
     >
