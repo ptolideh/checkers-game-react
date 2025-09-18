@@ -17,6 +17,10 @@ const isMoveInBounds = (boardSize: number, at: Position) => {
 
 const equals = (a: Position, b: Position) => a.x === b.x && a.y === b.y;
 
+const cloneBoard = (board: Board): Board => {
+  return board.map((row) => [...row]);
+};
+
 const positionKey = {
   separator: ':',
   get: ({ x, y }: Position) => `${x}${positionKey.separator}${y}`,
@@ -26,4 +30,4 @@ const positionKey = {
   },
 } as const;
 
-export { getPiece, getOffsetsFor, isMoveInBounds, equals, positionKey };
+export { getPiece, getOffsetsFor, isMoveInBounds, equals, cloneBoard, positionKey };
