@@ -30,7 +30,6 @@ interface Piece {
   y: number;
   color: Color;
   isKing: boolean;
-  moves: Moves;
 }
 
 interface MoveSet {

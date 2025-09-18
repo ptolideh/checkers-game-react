@@ -1,6 +1,6 @@
 import { PieceColor } from './rules';
 import type { Board, Captures, Color, MoveSet, Piece, Position, Steps } from './types';
-import { getOffsetsFor, getPiece, isMoveInBounds, positionKey } from './utils';
+import { cloneBoard, equals, getOffsetsFor, getPiece, isMoveInBounds, positionKey } from './utils';
 
 const opponentOf = (player: Color) => {
   return player === PieceColor.light ? PieceColor.dark : PieceColor.light;
@@ -198,13 +198,49 @@ const getNextPlayer = (currentPlayer: Color) => {
   return currentPlayer === PieceColor.light ? PieceColor.dark : PieceColor.light;
 };
 
+const applySimpleMove = (board: Board, moves: MoveSet, selectedPiece: Piece, target: Position) => {
+  const selectedKey = positionKey.get({ x: selectedPiece.x, y: selectedPiece.y });
+  const step = moves.steps.get(selectedKey)?.find((step) => equals(step.to, target));
+  if (!step) return null;
+
+  const newBoard = cloneBoard(board);
+  const pieceAfterMove = {
+    ...selectedPiece,
+    x: step.to.x,
+    y: step.to.y,
+  };
+  newBoard[step.to.y][step.to.x] = pieceAfterMove;
+  newBoard[selectedPiece.y][selectedPiece.x] = null;
+  return { newBoard, destination: step.to };
+};
+
+const applyCaptureMove = (board: Board, moves: MoveSet, selectedPiece: Piece, target: Position) => {
+  const selectedKey = positionKey.get({ x: selectedPiece.x, y: selectedPiece.y });
+  const capture = moves.captures.get(selectedKey)?.find((capture) => equals(capture.to, target));
+  if (!capture) return null;
+
+  const newBoard = cloneBoard(board);
+  const pieceAfterMove = {
+    ...selectedPiece,
+    x: capture.to.x,
+    y: capture.to.y,
+  };
+
+  newBoard[capture.to.y][capture.to.x] = pieceAfterMove;
+  newBoard[selectedPiece.y][selectedPiece.x] = null;
+  newBoard[capture.over.y][capture.over.x] = null;
+  return { newBoard, captured: capture.over, destination: capture.to };
+};
+
 export {
   legalStepsPerPiece,
   legalCapturesPerPiece,
   selectAllMovesPerTurn,
   mapAllMovesForActivePlayer,
-  hasCaptures,
-  getNextPlayer,
   selectInteractivityState,
   selectHighlightedSquares,
+  hasCaptures,
+  getNextPlayer,
+  applySimpleMove,
+  applyCaptureMove,
 };

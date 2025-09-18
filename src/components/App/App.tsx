@@ -1,14 +1,14 @@
 import { cn } from '@/lib/utils';
 import React, { useReducer } from 'react';
 import { CheckersPiece } from '../CheckersPiece';
-import type { Color, Position, Board, Piece, Capture } from '@/store/game-logic/types';
+import type { Color, Position, Board, Piece } from '@/store/game-logic/types';
 import { PieceColor } from '@/store/game-logic/rules';
 import { equals, getPiece, positionKey } from '@/store/game-logic/utils';
 import {
+  applyCaptureMove,
+  applySimpleMove,
   getNextPlayer,
   hasCaptures,
-  legalCapturesPerPiece,
-  mapAllMovesForActivePlayer,
   selectAllMovesPerTurn,
   selectHighlightedSquares,
   selectInteractivityState,
@@ -36,8 +36,7 @@ interface State {
 type Action =
   | { type: 'SELECT_PIECE'; payload: Position }
   | { type: 'DESELECT_PIECE'; payload: Position }
-  | { type: 'MOVE_PIECE'; payload: Position }
-  | { type: 'CAPTURE_PIECE'; payload: Position }
+  | { type: 'APPLY_MOVE'; payload: Position }
   | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' };
 
 // shouldPromoteToKing(color: Color, y: number): boolean {
@@ -76,10 +75,6 @@ const getInitialBoardAndSquaresState = () => {
             y: row,
             color: PieceColor.light,
             isKing: false,
-            moves: {
-              steps: [],
-              captures: [],
-            },
           };
         }
         if (row > 4) {
@@ -88,10 +83,6 @@ const getInitialBoardAndSquaresState = () => {
             y: row,
             color: PieceColor.dark,
             isKing: false,
-            moves: {
-              steps: [],
-              captures: [],
-            },
           };
         }
       }
@@ -135,67 +126,38 @@ function reducer(state: State, action: Action): State {
       return state;
     }
 
-    case 'MOVE_PIECE': {
+    case 'APPLY_MOVE': {
       const { x, y } = action.payload;
+      if (!state.selectedPiece) return state;
       const moves = selectAllMovesPerTurn(state.board, state.currentPlayer);
       const mustCapture = hasCaptures(moves);
-      if (state.selectedPiece && !mustCapture) {
-        const nextState = { ...state, board: [...state.board].map((row) => [...row]) };
-        const pieceAfterMove = {
-          ...state.selectedPiece,
-          x,
-          y,
-          moves: {
-            steps: [],
-            captures: [],
-          },
-        };
-        nextState.board[y][x] = pieceAfterMove;
-        nextState.board[state.selectedPiece.y][state.selectedPiece.x] = null;
-        nextState.selectedPiece = null;
-        nextState.currentPlayer = getNextPlayer(state.currentPlayer);
-        return nextState;
+      const highlightedSquares = selectHighlightedSquares(state.selectedPiece, moves);
+      // TODO- refactor this
+      if (!highlightedSquares.has(positionKey.get({ x, y }))) return state;
+
+      if (mustCapture) {
+        const res = applyCaptureMove(state.board, moves, state.selectedPiece, action.payload);
+        if (!res) return state;
+        else {
+          return {
+            ...state,
+            board: res.newBoard,
+            selectedPiece: null,
+            currentPlayer: getNextPlayer(state.currentPlayer),
+          };
+        }
+      } else {
+        const res = applySimpleMove(state.board, moves, state.selectedPiece, action.payload);
+        if (!res) return state;
+        else {
+          return {
+            ...state,
+            board: res.newBoard,
+            selectedPiece: null,
+            currentPlayer: getNextPlayer(state.currentPlayer),
+          };
+        }
       }
-
-      return state;
-    }
-
-    case 'CAPTURE_PIECE': {
-      const moves = selectAllMovesPerTurn(state.board, state.currentPlayer);
-      const mustCapture = hasCaptures(moves);
-      const targetKey = positionKey.get(action.payload);
-      if (!moves.captures.has(targetKey)) return state;
-      if (state.selectedPiece && mustCapture) {
-        const { over: capturePosition, to: landingPosition } = moves.captures.get(targetKey);
-        // debugger;
-        const nextState = { ...state, board: [...state.board].map((row) => [...row]) };
-
-        const pieceAfterMove = {
-          ...state.selectedPiece,
-          x: landingPosition.x,
-          y: landingPosition.y,
-          moves: {
-            steps: [],
-            captures: [],
-          },
-        };
-        nextState.board[landingPosition.y][landingPosition.x] = pieceAfterMove;
-        nextState.board[state.selectedPiece.y][state.selectedPiece.x] = null;
-        nextState.board[capturePosition.y][capturePosition.x] = null;
-        nextState.selectedPiece = null;
-
-        const moreCapturesFound = legalCapturesPerPiece(nextState.board, pieceAfterMove).length > 0;
-
-        const nextPlayer = moreCapturesFound
-          ? state.currentPlayer
-          : getNextPlayer(state.currentPlayer);
-        return {
-          ...nextState,
-          currentPlayer: nextPlayer,
-        };
-      }
-
-      return state;
     }
 
     case 'SET_MODE': {
@@ -230,7 +192,7 @@ export const App: React.FC = () => {
     return state.selectedPiece ? selectHighlightedSquares(state.selectedPiece, movesPerTurn) : null;
   }, [state.selectedPiece, movesPerTurn]);
 
-  console.log({ mustCapture, highlightedSquares });
+  console.log({ mustCapture, highlightedSquares, movesPerTurn });
 
   const handleClickSquare = (target: Position) => () => {
     const targetKey = positionKey.get(target);
@@ -246,7 +208,7 @@ export const App: React.FC = () => {
 
     if (!mustCapture && highlightedSquares?.has(targetKey)) {
       dispatch({
-        type: 'MOVE_PIECE',
+        type: 'APPLY_MOVE',
         payload: target,
       });
       return;
