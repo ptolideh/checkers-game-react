@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils';
-import { get } from 'http';
 import { useReducer } from 'react';
 
 const BOARD_SIZE = 8;
@@ -24,7 +23,7 @@ type CaptureOption = {
   landingPos: Position;
 };
 
-type Piece = Partial<Position> & {
+type Piece = Position & {
   color: PieceColor;
   isKing: boolean;
   moves: Position[];
@@ -37,7 +36,7 @@ type Square = Position & {
 };
 
 interface State {
-  selectedSquare: Square | null;
+  selectedPiece: Piece | null;
   mode: 'pvp' | 'pvc' | null;
   currentPlayer: PieceColor;
   playerMustCapture: boolean;
@@ -46,10 +45,10 @@ interface State {
 }
 
 type Action =
-  | { type: 'SELECT_PIECE'; payload: Square }
+  | { type: 'SELECT_PIECE'; payload: Position }
   | { type: 'DESELECT_PIECE' }
-  | { type: 'MOVE_PIECE'; payload: Square }
-  | { type: 'CAPTURE_PIECE'; payload: CaptureOption }
+  | { type: 'MOVE_PIECE'; payload: Position }
+  | { type: 'CAPTURE_PIECE'; payload: Piece['captures'][number] }
   | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' };
 
 const regularMoveOptions: Record<PieceColor, number[][]> = {
@@ -70,10 +69,9 @@ const kingMoveOptions: number[][] = [
   [1, -1],
 ];
 
-const shouldPromoteToKing = (piece: Piece, targetRow: number) => {
-  if (piece.isKing) return false;
-  if (piece.color === PieceColor.light && targetRow === BOARD_SIZE - 1) return true;
-  if (piece.color === PieceColor.dark && targetRow === 0) return true;
+const shouldPromoteToKing = (color: PieceColor, targetRow: number) => {
+  if (color === PieceColor.light && targetRow === BOARD_SIZE - 1) return true;
+  if (color === PieceColor.dark && targetRow === 0) return true;
   return false;
 };
 
@@ -194,16 +192,16 @@ const mapAllMovesForCurrentPlayer = (game: Square[][], color: PieceColor) => {
   });
 };
 
-const isSelected = (square: Square, selectedSquare: Square | null) => {
-  return square.x === selectedSquare?.x && square.y === selectedSquare?.y;
+const isSelected = (currPosition: Piece, selectedPiece: Piece | null) => {
+  return currPosition.x === selectedPiece?.x && currPosition.y === selectedPiece?.y;
 };
 
-const isSelectablePiece = (square: Square, playerMustCapture: boolean) => {
-  if (!square.piece) return false;
+const isSelectablePiece = (piece: Piece | null, playerMustCapture: boolean) => {
+  if (!piece) return false;
   if (playerMustCapture) {
-    return square.piece.captures.length > 0;
+    return piece.captures.length > 0;
   } else {
-    return square.piece.moves.length > 0;
+    return piece.moves.length > 0;
   }
 };
 
@@ -224,9 +222,24 @@ const getInitialGameState = () => {
       s.y = row;
       if ((row + col) % 2 !== 0) {
         s.color = SquareColor.dark;
-        if (row < 3) s.piece = { color: PieceColor.light, isKing: false, moves: [], captures: [] };
+        if (row < 3)
+          s.piece = {
+            x: col,
+            y: row,
+            color: PieceColor.light,
+            isKing: false,
+            moves: [],
+            captures: [],
+          };
         else if (row > 4)
-          s.piece = { color: PieceColor.dark, isKing: false, moves: [], captures: [] };
+          s.piece = {
+            x: col,
+            y: row,
+            color: PieceColor.dark,
+            isKing: false,
+            moves: [],
+            captures: [],
+          };
       }
     }
   }
@@ -234,7 +247,7 @@ const getInitialGameState = () => {
 };
 
 const initialState: State = {
-  selectedSquare: null,
+  selectedPiece: null,
   mode: null,
   currentPlayer: PieceColor.dark,
   playerMustCapture: false,
@@ -245,73 +258,96 @@ const initialState: State = {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SELECT_PIECE': {
-      if (!isSelectablePiece(action.payload, state.playerMustCapture)) return state;
-
-      return {
-        ...state,
-        selectedSquare: { ...action.payload },
-      };
-    }
-    case 'DESELECT_PIECE':
-      return {
-        ...state,
-        selectedSquare: null,
-      };
-
-    case 'MOVE_PIECE': {
-      if (!state.selectedSquare || state.playerMustCapture) return state;
-      const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
-
-      nextState.game[state.selectedSquare.y][state.selectedSquare.x].piece = null;
-      const movedPiece = Object.assign({}, state.selectedSquare.piece);
-      if (shouldPromoteToKing(movedPiece, action.payload.y)) {
-        movedPiece.isKing = true;
-      }
-      nextState.game[action.payload.y][action.payload.x].piece = movedPiece;
-
-      nextState.selectedSquare = null;
-      nextState.currentPlayer = getNextPlayer(state.currentPlayer);
-      nextState.game = mapAllMovesForCurrentPlayer(nextState.game, nextState.currentPlayer);
-      nextState.playerMustCapture = hasCaptures(nextState.game, nextState.currentPlayer);
-
-      return nextState;
-    }
-
-    case 'CAPTURE_PIECE': {
-      if (!state.selectedSquare || !state.playerMustCapture) return state;
-      const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
-      nextState.game[state.selectedSquare.y][state.selectedSquare.x].piece = null;
-      nextState.game[action.payload.capturePos.y][action.payload.capturePos.x].piece = null;
-      nextState.game[action.payload.landingPos.y][action.payload.landingPos.x].piece =
-        Object.assign({}, state.selectedSquare.piece);
-      nextState.selectedSquare = null;
-
-      if (
-        getValidCapturesPerPiece(
-          nextState.game,
-          nextState.game[action.payload.landingPos.y][action.payload.landingPos.x],
-        ).length > 0
-      ) {
+      const { x, y } = action.payload;
+      const selectedPiece = state.game[y][x].piece;
+      if (selectedPiece && isSelectablePiece(selectedPiece, state.playerMustCapture)) {
         return {
-          ...nextState,
-          playerMustCapture: true,
-          game: mapAllMovesForCurrentPlayer(nextState.game, nextState.currentPlayer),
+          ...state,
+          selectedPiece: { ...selectedPiece },
         };
       }
 
-      nextState.currentPlayer = getNextPlayer(state.currentPlayer);
-      nextState.game = mapAllMovesForCurrentPlayer(nextState.game, nextState.currentPlayer);
-      nextState.playerMustCapture = hasCaptures(nextState.game, nextState.currentPlayer);
-
-      return nextState;
+      return state;
+    }
+    case 'DESELECT_PIECE': {
+      return {
+        ...state,
+        selectedPiece: null,
+      };
     }
 
-    case 'SET_MODE':
+    case 'MOVE_PIECE': {
+      const { x, y } = action.payload;
+      if (state.selectedPiece && !state.playerMustCapture) {
+        const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
+        const movingPiece: Piece = {
+          x,
+          y,
+          color: state.selectedPiece.color,
+          isKing: state.selectedPiece.isKing || shouldPromoteToKing(state.selectedPiece.color, y),
+          moves: [],
+          captures: [],
+        };
+        nextState.game[y][x].piece = movingPiece;
+        nextState.game[state.selectedPiece.y][state.selectedPiece.x].piece = null;
+        nextState.selectedPiece = null;
+        nextState.currentPlayer = getNextPlayer(state.currentPlayer);
+        nextState.game = mapAllMovesForCurrentPlayer(nextState.game, nextState.currentPlayer);
+        nextState.playerMustCapture = hasCaptures(nextState.game, nextState.currentPlayer);
+        return nextState;
+      }
+
+      return state;
+    }
+
+    case 'CAPTURE_PIECE': {
+      if (state.selectedPiece && state.playerMustCapture) {
+        const { capturePos, landingPos } = action.payload;
+        // debugger;
+        const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
+        const movingPiece: Piece = {
+          x: landingPos.x,
+          y: landingPos.y,
+          color: state.selectedPiece.color,
+          isKing:
+            state.selectedPiece.isKing ||
+            shouldPromoteToKing(state.selectedPiece.color, landingPos.y),
+          captures: [],
+          moves: [],
+        };
+        nextState.game[landingPos.y][landingPos.x].piece = movingPiece;
+        nextState.game[state.selectedPiece.y][state.selectedPiece.x].piece = null;
+        nextState.game[capturePos.y][capturePos.x].piece = null;
+        nextState.selectedPiece = null;
+
+        const hasMoreCaptures =
+          getValidCapturesPerPiece(nextState.game, nextState.game[movingPiece.y][movingPiece.x])
+            .length > 0;
+
+        const nextPlayer = hasMoreCaptures
+          ? state.currentPlayer
+          : getNextPlayer(state.currentPlayer);
+        const nextGameState = mapAllMovesForCurrentPlayer(nextState.game, nextPlayer);
+        const playerMustCapture = hasMoreCaptures || hasCaptures(nextGameState, nextPlayer);
+        return {
+          ...nextState,
+          game: nextGameState,
+          currentPlayer: nextPlayer,
+          playerMustCapture,
+        };
+      }
+
+      return state;
+    }
+
+    case 'SET_MODE': {
       return {
         ...state,
         game: mapAllMovesForCurrentPlayer(state.game, state.currentPlayer),
         mode: action.payload,
       };
+    }
+
     default:
       return state;
   }
@@ -365,10 +401,10 @@ export const App: React.FC = () => {
                   square.color === SquareColor.dark ? 'bg-orange-900' : 'bg-orange-100',
                   {
                     'bg-green-300':
-                      state.selectedSquare?.piece?.moves.some(
+                      state.selectedPiece?.moves.some(
                         (move) => move.x === square.x && move.y === square.y,
                       ) ||
-                      state.selectedSquare?.piece?.captures.some(
+                      state.selectedPiece?.captures.some(
                         (capture) =>
                           capture.landingPos.x === square.x && capture.landingPos.y === square.y,
                       ),
@@ -376,26 +412,26 @@ export const App: React.FC = () => {
                   {
                     'opacity-50':
                       square.piece?.color === state.currentPlayer &&
-                      !isSelectablePiece(square, state.playerMustCapture),
+                      !isSelectablePiece(square.piece, state.playerMustCapture),
                   },
                 )}
                 onClick={() => {
-                  if (isSelected(square, state.selectedSquare)) {
+                  if (square.piece && isSelected(square.piece, state.selectedPiece)) {
                     dispatch({ type: 'DESELECT_PIECE' });
-                  } else if (isSelectablePiece(square, state.playerMustCapture)) {
+                  } else if (isSelectablePiece(square.piece, state.playerMustCapture)) {
                     dispatch({ type: 'SELECT_PIECE', payload: square });
                   } else if (
                     !state.playerMustCapture &&
-                    state.selectedSquare?.piece?.moves.some(
+                    state.selectedPiece?.moves.some(
                       (move) => move.x === square.x && move.y === square.y,
                     )
                   ) {
                     dispatch({
                       type: 'MOVE_PIECE',
-                      payload: square,
+                      payload: { x: square.x, y: square.y },
                     });
                   } else if (state.playerMustCapture) {
-                    const captured = state.selectedSquare?.piece?.captures.find(
+                    const captured = state.selectedPiece?.captures.find(
                       (capture) =>
                         capture.landingPos.x === square.x && capture.landingPos.y === square.y,
                     );
@@ -409,7 +445,10 @@ export const App: React.FC = () => {
                 }}
               >
                 {square.piece ? (
-                  <Piece {...square.piece} isSelected={isSelected(square, state.selectedSquare)} />
+                  <Piece
+                    {...square.piece}
+                    isSelected={isSelected(square.piece, state.selectedPiece)}
+                  />
                 ) : (
                   ''
                 )}
