@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
 import { useReducer } from 'react';
 import { CheckersPiece } from '../CheckersPiece';
-import { PieceColor } from '@/store/game-logic/types';
+import type { Position } from '@/store/game-logic/types';
+import { forwardMovementOffsets, kingMovementOffsets, PieceColor } from '@/store/game-logic/rules';
 
 const BOARD_SIZE = 8;
 
@@ -88,30 +89,6 @@ class Piece {
   }
 }
 
-const regularMoveOptions: Record<PieceColor, number[][]> = {
-  light: [
-    [1, 1],
-    [1, -1],
-  ],
-  dark: [
-    [-1, 1],
-    [-1, -1],
-  ],
-};
-
-const kingMoveOptions: number[][] = [
-  [-1, 1],
-  [-1, -1],
-  [1, 1],
-  [1, -1],
-];
-
-const shouldPromoteToKing = (color: PieceColor, targetRow: number) => {
-  if (color === PieceColor.light && targetRow === BOARD_SIZE - 1) return true;
-  if (color === PieceColor.dark && targetRow === 0) return true;
-  return false;
-};
-
 //A valid square must be inside the board
 const isMoveInBounds = (y: number, x: number): boolean => {
   return y >= 0 && y < BOARD_SIZE && x >= 0 && x < BOARD_SIZE;
@@ -138,12 +115,11 @@ const getNextPlayer = (currentPlayer: PieceColor) => {
 const getSimpleMovesForPiece = (game: Game, piece: Piece) => {
   if (!piece) return [];
 
-  const movementOptions = piece.isKing ? kingMoveOptions : regularMoveOptions[piece.color];
+  const movementOffsets = piece.isKing ? kingMovementOffsets : forwardMovementOffsets[piece.color];
 
-  return movementOptions.reduce<Position[]>((acc, option) => {
-    const [rowMovement, colMovement] = option;
-    const nextY = piece.y + rowMovement;
-    const nextX = piece.x + colMovement;
+  return movementOffsets.reduce<Position[]>((acc, moveOffset) => {
+    const nextY = piece.y + moveOffset.y;
+    const nextX = piece.x + moveOffset.x;
 
     if (isValidLandingPos(game, nextY, nextX)) {
       acc.push({
@@ -159,14 +135,13 @@ const getSimpleMovesForPiece = (game: Game, piece: Piece) => {
 const getValidCapturesForPiece = (game: Game, piece: Piece): Piece['captures'] => {
   if (!piece) return [];
 
-  const movementOptions = piece.isKing ? kingMoveOptions : regularMoveOptions[piece.color];
+  const movementOffsets = piece.isKing ? kingMovementOffsets : forwardMovementOffsets[piece.color];
 
-  return movementOptions.reduce<Piece['captures']>((acc, option) => {
-    const [rowMovement, colMovement] = option;
-    const nextY = piece.y + rowMovement;
-    const nextX = piece.x + colMovement;
-    const jumpY = piece.y + rowMovement * 2;
-    const jumpX = piece.x + colMovement * 2;
+  return movementOffsets.reduce<Piece['captures']>((acc, moveOffset) => {
+    const nextY = piece.y + moveOffset.y;
+    const nextX = piece.x + moveOffset.x;
+    const jumpY = piece.y + moveOffset.y * 2;
+    const jumpX = piece.x + moveOffset.x * 2;
 
     if (!isMoveInBounds(nextY, nextX)) return acc;
     if (!isMoveInBounds(jumpY, jumpX)) return acc;

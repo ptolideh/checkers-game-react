@@ -1,6 +1,6 @@
-enum PieceColor {
-  dark = 'dark',
-  light = 'light',
-}
+type Position = {
+  x: number;
+  y: number;
+};
 
-export { PieceColor };
+export type { Position };
