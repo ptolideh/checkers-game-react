@@ -1,5 +1,7 @@
 import { cn } from '@/lib/utils';
 import { useReducer } from 'react';
+import { CheckersPiece } from '../CheckersPiece';
+import { PieceColor } from '@/store/game-logic/types';
 
 const BOARD_SIZE = 8;
 
@@ -92,11 +94,11 @@ class Piece {
 }
 
 const regularMoveOptions: Record<PieceColor, number[][]> = {
-  lightPiece: [
+  light: [
     [1, 1],
     [1, -1],
   ],
-  darkPiece: [
+  dark: [
     [-1, 1],
     [-1, -1],
   ],
@@ -407,8 +409,7 @@ export const App: React.FC = () => {
                       ) ||
                       state.selectedPiece?.captures.some(
                         (capture) =>
-                          capture.landingPos.x === columnIndex &&
-                          capture.landingPos.y === rowIndex,
+                          capture.landingPos.x === columnIndex && capture.landingPos.y === rowIndex,
                       ),
                   },
                   {
@@ -435,8 +436,7 @@ export const App: React.FC = () => {
                   } else if (state.playerMustCapture) {
                     const captured = state.selectedPiece?.captures.find(
                       (capture) =>
-                        capture.landingPos.x === columnIndex &&
-                        capture.landingPos.y === rowIndex,
+                        capture.landingPos.x === columnIndex && capture.landingPos.y === rowIndex,
                     );
                     if (captured) {
                       dispatch({
@@ -448,7 +448,11 @@ export const App: React.FC = () => {
                 }}
               >
                 {piece ? (
-                  <PieceEl {...piece} isSelected={isSelected(piece, state.selectedPiece)} />
+                  <CheckersPiece
+                    color={piece.color}
+                    king={piece.isKing}
+                    isSelected={isSelected(piece, state.selectedPiece)}
+                  />
                 ) : (
                   ''
                 )}
@@ -457,33 +461,6 @@ export const App: React.FC = () => {
           </div>
         ))}
       </div>
-    </div>
-  );
-};
-
-const PieceEl: React.FC<Pick<Piece, 'color' | 'isKing'> & { isSelected?: boolean }> = ({
-  color,
-  isKing,
-  isSelected,
-}) => {
-  return (
-    <div
-      className={cn(
-        'rounded-full size-6 flex justify-center items-center border-2',
-        color === PieceColor.dark ? 'bg-black' : 'bg-red-600',
-        color === PieceColor.dark ? 'border-black' : 'border-red-600',
-        { 'border-green-300': isSelected },
-      )}
-    >
-      {isKing ? (
-        <div className="flex items-center justify-center bg-yellow-400 size-3 rounded-full relative">
-          <span className="absolute text-[0.5rem] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-            👑
-          </span>
-        </div>
-      ) : (
-        ''
-      )}
     </div>
   );
 };
