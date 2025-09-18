@@ -97,6 +97,8 @@ const getValidCapturesPerPiece = (game: Square[][], square: Square) => {
 const mapAllMovesForCurrentPlayer = (game: Square[][], color: 'red' | 'black') => {
   return game.map((row) => {
     return row.map((square) => {
+      if (!square.piece) return square;
+
       if (square.piece?.color === color) {
         const validCaptures = getValidCapturesPerPiece(game, square);
         if (validCaptures.length > 0) {
@@ -105,6 +107,7 @@ const mapAllMovesForCurrentPlayer = (game: Square[][], color: 'red' | 'black') =
             piece: {
               ...square.piece,
               captures: validCaptures,
+              moves: [],
             },
           };
         }
@@ -114,20 +117,31 @@ const mapAllMovesForCurrentPlayer = (game: Square[][], color: 'red' | 'black') =
           piece: {
             ...square.piece,
             moves: validMoves,
+            captures: [],
           },
         };
       }
-      return square;
+
+      return {
+        ...square,
+        piece: {
+          ...square.piece,
+          moves: [],
+          captures: [],
+        },
+      };
     });
   });
 };
 
-// const getCurrentPlayerSquares = (game: Square[][], color: 'red' | 'black') => {
-//   return game.flatMap((row) => row.filter((square) => square.piece?.color === color));
-// };
-
 const isSelected = (square: Square, selectedSquare: Square | null) => {
   return square.x === selectedSquare?.x && square.y === selectedSquare?.y;
+};
+
+const isSelectablePiece = (square: Square) => {
+  return (
+    square.piece !== null && (square.piece.captures.length > 0 || square.piece.moves.length > 0)
+  );
 };
 
 type Piece = {
@@ -148,7 +162,7 @@ interface State {
   selectedSquare: Square | null;
   validMoves: string[];
   mode: 'pvp' | 'pvc' | null;
-  currentPlayer: 'red' | 'black' | null;
+  currentPlayer: 'red' | 'black';
   mustCapture: boolean;
   game: Square[][];
 }
@@ -183,7 +197,7 @@ const initialState: State = {
   selectedSquare: null,
   validMoves: [],
   mode: null,
-  currentPlayer: null,
+  currentPlayer: 'black',
   mustCapture: false,
   game: getInitialGameState(),
 };
@@ -214,6 +228,7 @@ function reducer(state: State, action: Action): State {
       };
     case 'MOVE_PIECE':
       const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
+      let currentPlayer = state.currentPlayer;
       if (state.selectedSquare) {
         nextState.game[state.selectedSquare.y][state.selectedSquare.x].piece = null;
         nextState.game[action.payload.y][action.payload.x].piece = Object.assign(
@@ -224,15 +239,30 @@ function reducer(state: State, action: Action): State {
         nextState.validMoves = [];
       }
 
-      return nextState;
-    case 'SET_MODE':
-      const currentPlayer = 'black';
+      if (
+        getValidCapturesPerPiece(nextState.game, nextState.game[action.payload.y][action.payload.x])
+          .length > 0
+      ) {
+        nextState.mustCapture = true;
+        return {
+          ...nextState,
+          game: mapAllMovesForCurrentPlayer(nextState.game, currentPlayer),
+        };
+      }
+
+      currentPlayer = state.currentPlayer === 'red' ? 'black' : 'red';
 
       return {
-        ...state,
-        game: mapAllMovesForCurrentPlayer(state.game, currentPlayer),
-        mode: action.payload,
+        ...nextState,
+        game: mapAllMovesForCurrentPlayer(nextState.game, currentPlayer),
         currentPlayer,
+      };
+
+    case 'SET_MODE':
+      return {
+        ...state,
+        game: mapAllMovesForCurrentPlayer(state.game, state.currentPlayer),
+        mode: action.payload,
       };
     default:
       return state;
@@ -286,17 +316,25 @@ export const App: React.FC = () => {
                   'border border-l-black border-r-black size-10 flex justify-center items-center',
                   square.color === 'dark' ? 'bg-orange-900' : 'bg-orange-100',
                   {
-                    'bg-green-300': state.validMoves.includes(
+                    'bg-green-300': state.selectedSquare?.piece?.moves.includes(
                       getKeyFromCoordinates(square.x, square.y),
                     ),
+                  },
+                  {
+                    'opacity-50':
+                      square.piece?.color === state.currentPlayer && !isSelectablePiece(square),
                   },
                 )}
                 onClick={() => {
                   if (isSelected(square, state.selectedSquare)) {
                     dispatch({ type: 'DESELECT_PIECE' });
-                  } else if (square.piece) {
+                  } else if (isSelectablePiece(square)) {
                     dispatch({ type: 'SELECT_PIECE', payload: square });
-                  } else if (state.validMoves.includes(getKeyFromCoordinates(square.x, square.y))) {
+                  } else if (
+                    state.selectedSquare?.piece?.moves.includes(
+                      getKeyFromCoordinates(square.x, square.y),
+                    )
+                  ) {
                     dispatch({
                       type: 'MOVE_PIECE',
                       payload: square,
