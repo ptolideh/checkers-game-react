@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { useReducer } from 'react';
 import { CheckersPiece } from '../CheckersPiece';
-import type { Position } from '@/store/game-logic/types';
+import type { Color, Position } from '@/store/game-logic/types';
 import { forwardMovementOffsets, kingMovementOffsets, PieceColor } from '@/store/game-logic/rules';
 
 const BOARD_SIZE = 8;
@@ -11,24 +11,19 @@ enum SquareColor {
   light = 'lightPiece',
 }
 
-type Position = {
-  x: number;
-  y: number;
-};
-
 type Square = Position & {
   color: SquareColor;
 };
 
-type Game = (Piece | null)[][];
+type Board = (Piece | null)[][];
 
 interface State {
   selectedPiece: Piece | null;
   mode: 'pvp' | 'pvc' | null;
-  currentPlayer: PieceColor;
+  currentPlayer: Color;
   playerMustCapture: boolean;
-  game: Game;
-  board: Omit<Square, 'piece'>[][];
+  board: Board;
+  squares: Square[][];
 }
 
 type Action =
@@ -41,7 +36,7 @@ type Action =
 class Piece {
   x: number;
   y: number;
-  color: PieceColor;
+  color: Color;
   isKing: boolean;
   moves: Position[];
   captures: { capturePos: Position; landingPos: Position }[];
@@ -95,24 +90,24 @@ const isMoveInBounds = (y: number, x: number): boolean => {
 };
 
 //A valid move target must be inside the board and empty
-const isValidLandingPos = (game: Game, y: number, x: number): boolean => {
-  return isMoveInBounds(y, x) && game[y][x] === null;
+const isValidLandingPos = (board: Board, y: number, x: number): boolean => {
+  return isMoveInBounds(y, x) && board[y][x] === null;
 };
 
 const hasAdjacentOpponent = (current: Piece, adjacent: Piece) => {
   return adjacent?.color && current.color !== adjacent.color;
 };
 
-const hasCaptures = (game: Game, currentPlayer: PieceColor) =>
-  game.some((row) =>
+const hasCaptures = (board: Board, currentPlayer: Color) =>
+  board.some((row) =>
     row.some((piece) => piece && piece.color === currentPlayer && piece.captures.length > 0),
   );
 
-const getNextPlayer = (currentPlayer: PieceColor) => {
+const getNextPlayer = (currentPlayer: Color) => {
   return currentPlayer === PieceColor.light ? PieceColor.dark : PieceColor.light;
 };
 
-const getSimpleMovesForPiece = (game: Game, piece: Piece) => {
+const getSimpleMovesForPiece = (board: Board, piece: Piece) => {
   if (!piece) return [];
 
   const movementOffsets = piece.isKing ? kingMovementOffsets : forwardMovementOffsets[piece.color];
@@ -121,7 +116,7 @@ const getSimpleMovesForPiece = (game: Game, piece: Piece) => {
     const nextY = piece.y + moveOffset.y;
     const nextX = piece.x + moveOffset.x;
 
-    if (isValidLandingPos(game, nextY, nextX)) {
+    if (isValidLandingPos(board, nextY, nextX)) {
       acc.push({
         x: nextX,
         y: nextY,
@@ -132,7 +127,7 @@ const getSimpleMovesForPiece = (game: Game, piece: Piece) => {
   }, []);
 };
 
-const getValidCapturesForPiece = (game: Game, piece: Piece): Piece['captures'] => {
+const getValidCapturesForPiece = (board: Board, piece: Piece): Piece['captures'] => {
   if (!piece) return [];
 
   const movementOffsets = piece.isKing ? kingMovementOffsets : forwardMovementOffsets[piece.color];
@@ -145,8 +140,8 @@ const getValidCapturesForPiece = (game: Game, piece: Piece): Piece['captures'] =
 
     if (!isMoveInBounds(nextY, nextX)) return acc;
     if (!isMoveInBounds(jumpY, jumpX)) return acc;
-    if (!isValidLandingPos(game, jumpY, jumpX)) return acc;
-    const adjacentPiece = game[nextY][nextX];
+    if (!isValidLandingPos(board, jumpY, jumpX)) return acc;
+    const adjacentPiece = board[nextY][nextX];
 
     if (adjacentPiece && hasAdjacentOpponent(piece, adjacentPiece)) {
       acc.push({
@@ -159,18 +154,18 @@ const getValidCapturesForPiece = (game: Game, piece: Piece): Piece['captures'] =
   }, []);
 };
 
-const mapAllMovesForActivePlayer = (game: Game, currentPlayer: PieceColor): Game => {
-  return game.map((row) => {
+const mapAllMovesForActivePlayer = (board: Board, currentPlayer: Color): Board => {
+  return board.map((row) => {
     return row.map((piece) => {
       if (!piece || piece.color !== currentPlayer) {
         return piece?.clearAllMoves() ?? null;
       }
 
-      const validCaptures = getValidCapturesForPiece(game, piece);
+      const validCaptures = getValidCapturesForPiece(board, piece);
       if (validCaptures.length > 0) {
         return piece.clearAllMoves().clone({ captures: validCaptures });
       } else {
-        const validMoves = getSimpleMovesForPiece(game, piece);
+        const validMoves = getSimpleMovesForPiece(board, piece);
         return piece.clearAllMoves().clone({ moves: validMoves });
       }
     });
@@ -190,8 +185,8 @@ const isSelectablePiece = (piece: Piece | null, playerMustCapture: boolean) => {
   }
 };
 
-const getInitialGameAndBoardState = () => {
-  const board: Square[][] = Array.from({ length: BOARD_SIZE }, () =>
+const getInitialBoardAndSquaresState = () => {
+  const squares: Square[][] = Array.from({ length: BOARD_SIZE }, () =>
     Array.from({ length: BOARD_SIZE }, () => ({
       x: 0,
       y: 0,
@@ -199,27 +194,27 @@ const getInitialGameAndBoardState = () => {
     })),
   );
 
-  const game: Game = Array.from({ length: board.length }, () =>
-    Array.from({ length: board.length }, () => null),
+  const board: Board = Array.from({ length: squares.length }, () =>
+    Array.from({ length: squares.length }, () => null),
   );
 
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE; col++) {
-      const square = board[row][col];
+      const square = squares[row][col];
       square.x = col;
       square.y = row;
       if ((row + col) % 2 !== 0) {
         square.color = SquareColor.dark;
         if (row < 3) {
-          game[row][col] = new Piece({ x: col, y: row, color: PieceColor.light });
+          board[row][col] = new Piece({ x: col, y: row, color: PieceColor.light });
         }
         if (row > 4) {
-          game[row][col] = new Piece({ x: col, y: row, color: PieceColor.dark });
+          board[row][col] = new Piece({ x: col, y: row, color: PieceColor.dark });
         }
       }
     }
   }
-  return { board, game };
+  return { board, squares };
 };
 
 const initialState: State = {
@@ -227,7 +222,7 @@ const initialState: State = {
   mode: null,
   currentPlayer: PieceColor.dark,
   playerMustCapture: false,
-  ...getInitialGameAndBoardState(),
+  ...getInitialBoardAndSquaresState(),
 };
 
 function reducer(state: State, action: Action): State {
@@ -235,7 +230,7 @@ function reducer(state: State, action: Action): State {
     case 'SELECT_PIECE': {
       const { x, y } = action.payload;
       // debugger;
-      const matchingPiece = state.game[y][x];
+      const matchingPiece = state.board[y][x];
       if (matchingPiece && isSelectablePiece(matchingPiece, state.playerMustCapture)) {
         const selectedPiece = matchingPiece.clone();
         return {
@@ -256,19 +251,19 @@ function reducer(state: State, action: Action): State {
     case 'MOVE_PIECE': {
       const { x, y } = action.payload;
       if (state.selectedPiece && !state.playerMustCapture) {
-        const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
+        const nextState = { ...state, board: [...state.board].map((row) => [...row]) };
         const pieceAfterMove = state.selectedPiece
           .clone({
             x,
             y,
           })
           .clearAllMoves();
-        nextState.game[y][x] = pieceAfterMove;
-        nextState.game[state.selectedPiece.y][state.selectedPiece.x] = null;
+        nextState.board[y][x] = pieceAfterMove;
+        nextState.board[state.selectedPiece.y][state.selectedPiece.x] = null;
         nextState.selectedPiece = null;
         nextState.currentPlayer = getNextPlayer(state.currentPlayer);
-        nextState.game = mapAllMovesForActivePlayer(nextState.game, nextState.currentPlayer);
-        nextState.playerMustCapture = hasCaptures(nextState.game, nextState.currentPlayer);
+        nextState.board = mapAllMovesForActivePlayer(nextState.board, nextState.currentPlayer);
+        nextState.playerMustCapture = hasCaptures(nextState.board, nextState.currentPlayer);
         return nextState;
       }
 
@@ -279,7 +274,7 @@ function reducer(state: State, action: Action): State {
       if (state.selectedPiece && state.playerMustCapture) {
         const { capturePos, landingPos } = action.payload;
         // debugger;
-        const nextState = { ...state, game: [...state.game].map((row) => [...row]) };
+        const nextState = { ...state, board: [...state.board].map((row) => [...row]) };
         const pieceAfterMove = state.selectedPiece
           .clone({
             x: landingPos.x,
@@ -287,22 +282,22 @@ function reducer(state: State, action: Action): State {
           })
           .clearAllMoves();
 
-        nextState.game[landingPos.y][landingPos.x] = pieceAfterMove;
-        nextState.game[state.selectedPiece.y][state.selectedPiece.x] = null;
-        nextState.game[capturePos.y][capturePos.x] = null;
+        nextState.board[landingPos.y][landingPos.x] = pieceAfterMove;
+        nextState.board[state.selectedPiece.y][state.selectedPiece.x] = null;
+        nextState.board[capturePos.y][capturePos.x] = null;
         nextState.selectedPiece = null;
 
         const moreCapturesFound =
-          getValidCapturesForPiece(nextState.game, pieceAfterMove).length > 0;
+          getValidCapturesForPiece(nextState.board, pieceAfterMove).length > 0;
 
         const nextPlayer = moreCapturesFound
           ? state.currentPlayer
           : getNextPlayer(state.currentPlayer);
-        const nextGameState = mapAllMovesForActivePlayer(nextState.game, nextPlayer);
-        const playerMustCapture = moreCapturesFound || hasCaptures(nextGameState, nextPlayer);
+        const nextBoardState = mapAllMovesForActivePlayer(nextState.board, nextPlayer);
+        const playerMustCapture = moreCapturesFound || hasCaptures(nextBoardState, nextPlayer);
         return {
           ...nextState,
-          game: nextGameState,
+          board: nextBoardState,
           currentPlayer: nextPlayer,
           playerMustCapture,
         };
@@ -314,7 +309,7 @@ function reducer(state: State, action: Action): State {
     case 'SET_MODE': {
       return {
         ...state,
-        game: mapAllMovesForActivePlayer(state.game, state.currentPlayer),
+        board: mapAllMovesForActivePlayer(state.board, state.currentPlayer),
         mode: action.payload,
       };
     }
@@ -362,14 +357,14 @@ export const App: React.FC = () => {
         <span>Current: {state.currentPlayer === PieceColor.light ? 'Red' : 'Black'}</span>
       </div>
       <div className="flex flex-col border border-black w-fit">
-        {state.game?.map((row, rowIndex) => (
+        {state.board?.map((row, rowIndex) => (
           <div key={rowIndex} className="flex border-t-black border-b-black items-center">
             {row.map((piece, columnIndex) => (
               <div
                 key={columnIndex}
                 className={cn(
                   'border border-l-black border-r-black size-10 flex justify-center items-center',
-                  state.board[rowIndex][columnIndex].color === SquareColor.dark
+                  state.squares[rowIndex][columnIndex].color === SquareColor.dark
                     ? 'bg-orange-900'
                     : 'bg-orange-100',
                   {
