@@ -10,8 +10,9 @@ import {
   getNextPlayer,
   hasCaptures,
   selectAllMovesPerTurn,
-  selectHighlightedSquares,
+  selectMoveTargetsFor,
   selectInteractivityState,
+  isInMoveTargets,
 } from '@/store/game-logic/engine';
 
 const BOARD_SIZE = 8;
@@ -130,9 +131,8 @@ function reducer(state: State, action: Action): State {
       if (!state.selectedPiece) return state;
       const moves = selectAllMovesPerTurn(state.board, state.currentPlayer);
       const mustCapture = hasCaptures(moves);
-      const highlightedSquares = selectHighlightedSquares(state.selectedPiece, moves);
-      // TODO- refactor this
-      if (!highlightedSquares.has(positionKey.get(action.payload))) return state;
+      const moveTargetsForSelection = selectMoveTargetsFor(state.selectedPiece, moves);
+      if (!isInMoveTargets(moveTargetsForSelection, action.payload)) return state;
 
       if (mustCapture) {
         const res = applyCaptureMove(state.board, moves, state.selectedPiece, action.payload);
@@ -187,28 +187,28 @@ export const App: React.FC = () => {
     return selectInteractivityState(state.board, state.currentPlayer, movesPerTurn);
   }, [movesPerTurn, state.board, state.currentPlayer]);
 
-  const highlightedSquares = React.useMemo(() => {
-    return state.selectedPiece ? selectHighlightedSquares(state.selectedPiece, movesPerTurn) : null;
+  const moveTargetsForSelection = React.useMemo(() => {
+    return state.selectedPiece ? selectMoveTargetsFor(state.selectedPiece, movesPerTurn) : null;
   }, [state.selectedPiece, movesPerTurn]);
 
-  console.log({ mustCapture, highlightedSquares, movesPerTurn });
+  console.log({ mustCapture, moveTargetsForSelection, movesPerTurn });
 
-  const handleClickSquare = (target: Position) => () => {
-    const targetKey = positionKey.get(target);
-    if (state.selectedPiece && equals(state.selectedPiece, target)) {
-      dispatch({ type: 'DESELECT_PIECE', payload: target });
+  const handleClickSquare = (coord: Position) => () => {
+    const targetKey = positionKey.get(coord);
+    if (state.selectedPiece && equals(state.selectedPiece, coord)) {
+      dispatch({ type: 'DESELECT_PIECE', payload: coord });
       return;
     }
 
     if (activePlayerPieces.selectable.has(targetKey)) {
-      dispatch({ type: 'SELECT_PIECE', payload: target });
+      dispatch({ type: 'SELECT_PIECE', payload: coord });
       return;
     }
 
-    if (highlightedSquares?.has(targetKey)) {
+    if (isInMoveTargets(moveTargetsForSelection, coord)) {
       dispatch({
         type: 'APPLY_MOVE',
-        payload: target,
+        payload: coord,
       });
     }
   };
@@ -258,9 +258,10 @@ export const App: React.FC = () => {
                     ? 'bg-orange-900'
                     : 'bg-orange-100',
                   {
-                    'bg-green-300': highlightedSquares?.has(
-                      positionKey.get({ x: columnIndex, y: rowIndex }),
-                    ),
+                    'bg-green-300': isInMoveTargets(moveTargetsForSelection, {
+                      x: columnIndex,
+                      y: rowIndex,
+                    }),
                   },
                   {
                     'opacity-50': activePlayerPieces.disabled.has(

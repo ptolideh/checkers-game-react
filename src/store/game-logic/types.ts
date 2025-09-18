@@ -37,4 +37,17 @@ interface MoveSet {
   captures: Map<string, Captures>;
 }
 
-export type { Position, Color, Piece, Board, Step, Capture, Steps, Captures, MoveSet };
+type MoveTargetKeys = Set<string>;
+
+export type {
+  Position,
+  Color,
+  Piece,
+  Board,
+  Step,
+  Capture,
+  Steps,
+  Captures,
+  MoveSet,
+  MoveTargetKeys,
+};

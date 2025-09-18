@@ -1,5 +1,14 @@
 import { PieceColor } from './rules';
-import type { Board, Captures, Color, MoveSet, Piece, Position, Steps } from './types';
+import type {
+  Board,
+  Captures,
+  Color,
+  MoveSet,
+  MoveTargetKeys,
+  Piece,
+  Position,
+  Steps,
+} from './types';
 import { cloneBoard, equals, getOffsetsFor, getPiece, isMoveInBounds, positionKey } from './utils';
 
 const opponentOf = (player: Color) => {
@@ -173,21 +182,25 @@ const selectInteractivityState = (
   };
 };
 
-const selectHighlightedSquares = (selected: Piece, legalMoves: MoveSet): Set<string> => {
-  const highlightedSquares = new Set<string>();
+const selectMoveTargetsFor = (selected: Piece, legalMoves: MoveSet): MoveTargetKeys => {
+  const moveTargets = new Set<string>();
   const selectedKey = positionKey.get(selected);
   const mustCapture = hasCaptures(legalMoves);
 
   if (mustCapture) {
     for (let capture of legalMoves.captures.get(selectedKey) || []) {
-      highlightedSquares.add(positionKey.get(capture.to));
+      moveTargets.add(positionKey.get(capture.to));
     }
   } else {
     for (let step of legalMoves.steps.get(selectedKey) || []) {
-      highlightedSquares.add(positionKey.get(step.to));
+      moveTargets.add(positionKey.get(step.to));
     }
   }
-  return highlightedSquares;
+  return moveTargets;
+};
+
+const isInMoveTargets = (moveTargets: MoveTargetKeys | null, target: Position) => {
+  return !!moveTargets && moveTargets.has(positionKey.get(target));
 };
 
 const hasCaptures = (moves: MoveSet) => {
@@ -238,7 +251,8 @@ export {
   selectAllMovesPerTurn,
   mapAllMovesForActivePlayer,
   selectInteractivityState,
-  selectHighlightedSquares,
+  selectMoveTargetsFor,
+  isInMoveTargets,
   hasCaptures,
   getNextPlayer,
   applySimpleMove,
