@@ -40,16 +40,6 @@ type Action =
   | { type: 'APPLY_MOVE'; payload: Position }
   | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' };
 
-// shouldPromoteToKing(color: Color, y: number): boolean {
-//   if (
-//     (color === PieceColor.light && y === BOARD_SIZE - 1) ||
-//     (color === PieceColor.dark && y === 0)
-//   ) {
-//     return true;
-//   }
-//   return false;
-// }
-
 const getInitialBoardAndSquaresState = () => {
   const squares: Square[][] = Array.from({ length: BOARD_SIZE }, () =>
     Array.from({ length: BOARD_SIZE }, () => ({

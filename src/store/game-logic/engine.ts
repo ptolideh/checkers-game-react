@@ -1,4 +1,4 @@
-import { PieceColor } from './rules';
+import { BOARD_SIZE, PieceColor } from './rules';
 import type {
   Board,
   Captures,
@@ -211,6 +211,17 @@ const getNextPlayer = (currentPlayer: Color) => {
   return currentPlayer === PieceColor.light ? PieceColor.dark : PieceColor.light;
 };
 
+const promoteToKing = (piece: Piece): boolean => {
+  if (piece.isKing) return true;
+  if (
+    (piece.color === PieceColor.light && piece.y === BOARD_SIZE - 1) ||
+    (piece.color === PieceColor.dark && piece.y === 0)
+  ) {
+    return true;
+  }
+  return false;
+};
+
 const applySimpleMove = (board: Board, moves: MoveSet, selectedPiece: Piece, target: Position) => {
   const selectedKey = positionKey.get({ x: selectedPiece.x, y: selectedPiece.y });
   const step = moves.steps.get(selectedKey)?.find((step) => equals(step.to, target));
@@ -222,6 +233,10 @@ const applySimpleMove = (board: Board, moves: MoveSet, selectedPiece: Piece, tar
     x: step.to.x,
     y: step.to.y,
   };
+
+  const shouldPromote = promoteToKing(pieceAfterMove);
+  if (shouldPromote) pieceAfterMove.isKing = true;
+
   newBoard[step.to.y][step.to.x] = pieceAfterMove;
   newBoard[selectedPiece.y][selectedPiece.x] = null;
   return { newBoard, destination: step.to };
@@ -238,6 +253,9 @@ const applyCaptureMove = (board: Board, moves: MoveSet, selectedPiece: Piece, ta
     x: capture.to.x,
     y: capture.to.y,
   };
+
+  const shouldPromote = promoteToKing(pieceAfterMove);
+  if (shouldPromote) pieceAfterMove.isKing = true;
 
   newBoard[capture.to.y][capture.to.x] = pieceAfterMove;
   newBoard[selectedPiece.y][selectedPiece.x] = null;
