@@ -11,7 +11,7 @@ interface Piece {
   color: Color;
   isKing: boolean;
   moves: Position[];
-  captures: { capturePos: Position; landingPos: Position }[];
+  captures: { capturePosition: Position; landingPosition: Position }[];
 }
 
 type Board = (Piece | null)[][];

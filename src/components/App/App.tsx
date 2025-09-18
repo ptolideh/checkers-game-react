@@ -2,7 +2,8 @@ import { cn } from '@/lib/utils';
 import { useReducer } from 'react';
 import { CheckersPiece } from '../CheckersPiece';
 import type { Color, Position, Board, Piece } from '@/store/game-logic/types';
-import { forwardMovementOffsets, kingMovementOffsets, PieceColor } from '@/store/game-logic/rules';
+import { PieceColor } from '@/store/game-logic/rules';
+import { isMoveInBounds, getOffsetsFor, getPiece } from '@/store/game-logic/utils';
 
 const BOARD_SIZE = 8;
 
@@ -41,14 +42,9 @@ type Action =
 //   return false;
 // }
 
-//A valid square must be inside the board
-const isMoveInBounds = (y: number, x: number): boolean => {
-  return y >= 0 && y < BOARD_SIZE && x >= 0 && x < BOARD_SIZE;
-};
-
 //A valid move target must be inside the board and empty
-const isValidLandingPos = (board: Board, y: number, x: number): boolean => {
-  return isMoveInBounds(y, x) && board[y][x] === null;
+const isLegalLandingSpot = (board: Board, at: Position): boolean => {
+  return isMoveInBounds(board.length, at) && getPiece(board, at) === null;
 };
 
 const hasAdjacentOpponent = (current: Piece, adjacent: Piece) => {
@@ -64,46 +60,50 @@ const getNextPlayer = (currentPlayer: Color) => {
   return currentPlayer === PieceColor.light ? PieceColor.dark : PieceColor.light;
 };
 
-const getSimpleMovesForPiece = (board: Board, piece: Piece) => {
+const getLegalStepsForPiece = (board: Board, piece: Piece) => {
   if (!piece) return [];
 
-  const movementOffsets = piece.isKing ? kingMovementOffsets : forwardMovementOffsets[piece.color];
+  const movementOffsets = getOffsetsFor(piece);
 
   return movementOffsets.reduce<Position[]>((acc, moveOffset) => {
-    const nextY = piece.y + moveOffset.y;
-    const nextX = piece.x + moveOffset.x;
+    const adjacentPosition = {
+      x: piece.x + moveOffset.x,
+      y: piece.y + moveOffset.y,
+    };
 
-    if (isValidLandingPos(board, nextY, nextX)) {
-      acc.push({
-        x: nextX,
-        y: nextY,
-      });
+    if (isLegalLandingSpot(board, adjacentPosition)) {
+      acc.push(adjacentPosition);
     }
 
     return acc;
   }, []);
 };
 
-const getValidCapturesForPiece = (board: Board, piece: Piece): Piece['captures'] => {
+const getLegalCapturesForPiece = (board: Board, piece: Piece): Piece['captures'] => {
   if (!piece) return [];
 
-  const movementOffsets = piece.isKing ? kingMovementOffsets : forwardMovementOffsets[piece.color];
+  const movementOffsets = getOffsetsFor(piece);
 
   return movementOffsets.reduce<Piece['captures']>((acc, moveOffset) => {
-    const nextY = piece.y + moveOffset.y;
-    const nextX = piece.x + moveOffset.x;
-    const jumpY = piece.y + moveOffset.y * 2;
-    const jumpX = piece.x + moveOffset.x * 2;
+    const adjacentPosition = {
+      x: piece.x + moveOffset.x,
+      y: piece.y + moveOffset.y,
+    };
 
-    if (!isMoveInBounds(nextY, nextX)) return acc;
-    if (!isMoveInBounds(jumpY, jumpX)) return acc;
-    if (!isValidLandingPos(board, jumpY, jumpX)) return acc;
-    const adjacentPiece = board[nextY][nextX];
+    const landingPosition = {
+      x: piece.x + moveOffset.x * 2,
+      y: piece.y + moveOffset.y * 2,
+    };
+
+    if (!isMoveInBounds(board.length, adjacentPosition)) return acc;
+    if (!isMoveInBounds(board.length, landingPosition)) return acc;
+    if (!isLegalLandingSpot(board, landingPosition)) return acc;
+    const adjacentPiece = getPiece(board, adjacentPosition);
 
     if (adjacentPiece && hasAdjacentOpponent(piece, adjacentPiece)) {
       acc.push({
-        capturePos: { x: nextX, y: nextY },
-        landingPos: { x: jumpX, y: jumpY },
+        capturePosition: adjacentPosition,
+        landingPosition,
       });
     }
 
@@ -124,7 +124,7 @@ const mapAllMovesForActivePlayer = (board: Board, currentPlayer: Color): Board =
           : null;
       }
 
-      const validCaptures = getValidCapturesForPiece(board, piece);
+      const validCaptures = getLegalCapturesForPiece(board, piece);
       if (validCaptures.length > 0) {
         return {
           ...piece,
@@ -132,7 +132,7 @@ const mapAllMovesForActivePlayer = (board: Board, currentPlayer: Color): Board =
           moves: [],
         };
       } else {
-        const validMoves = getSimpleMovesForPiece(board, piece);
+        const validMoves = getLegalStepsForPiece(board, piece);
         return {
           ...piece,
           moves: validMoves,
@@ -215,7 +215,7 @@ function reducer(state: State, action: Action): State {
     case 'SELECT_PIECE': {
       const { x, y } = action.payload;
       // debugger;
-      const matchingPiece = state.board[y][x];
+      const matchingPiece = getPiece(state.board, { x, y });
       if (matchingPiece && isSelectablePiece(matchingPiece, state.playerMustCapture)) {
         return {
           ...state,
@@ -257,24 +257,24 @@ function reducer(state: State, action: Action): State {
 
     case 'CAPTURE_PIECE': {
       if (state.selectedPiece && state.playerMustCapture) {
-        const { capturePos, landingPos } = action.payload;
+        const { capturePosition, landingPosition } = action.payload;
         // debugger;
         const nextState = { ...state, board: [...state.board].map((row) => [...row]) };
 
         const pieceAfterMove = {
           ...state.selectedPiece,
-          x: landingPos.x,
-          y: landingPos.y,
+          x: landingPosition.x,
+          y: landingPosition.y,
           moves: [],
           captures: [],
         };
-        nextState.board[landingPos.y][landingPos.x] = pieceAfterMove;
+        nextState.board[landingPosition.y][landingPosition.x] = pieceAfterMove;
         nextState.board[state.selectedPiece.y][state.selectedPiece.x] = null;
-        nextState.board[capturePos.y][capturePos.x] = null;
+        nextState.board[capturePosition.y][capturePosition.x] = null;
         nextState.selectedPiece = null;
 
         const moreCapturesFound =
-          getValidCapturesForPiece(nextState.board, pieceAfterMove).length > 0;
+          getLegalCapturesForPiece(nextState.board, pieceAfterMove).length > 0;
 
         const nextPlayer = moreCapturesFound
           ? state.currentPlayer
@@ -360,7 +360,8 @@ export const App: React.FC = () => {
                       ) ||
                       state.selectedPiece?.captures.some(
                         (capture) =>
-                          capture.landingPos.x === columnIndex && capture.landingPos.y === rowIndex,
+                          capture.landingPosition.x === columnIndex &&
+                          capture.landingPosition.y === rowIndex,
                       ),
                   },
                   {
@@ -387,7 +388,8 @@ export const App: React.FC = () => {
                   } else if (state.playerMustCapture) {
                     const captured = state.selectedPiece?.captures.find(
                       (capture) =>
-                        capture.landingPos.x === columnIndex && capture.landingPos.y === rowIndex,
+                        capture.landingPosition.x === columnIndex &&
+                        capture.landingPosition.y === rowIndex,
                     );
                     if (captured) {
                       dispatch({
