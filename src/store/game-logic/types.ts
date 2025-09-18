@@ -1,19 +1,41 @@
-type Position = {
+interface Position {
   x: number;
   y: number;
-};
+}
 
 type Color = 'dark' | 'light';
+
+type Board = (Piece | null)[][];
+
+interface Step {
+  from: Position;
+  to: Position;
+}
+
+interface Capture {
+  from: Position;
+  over: Position;
+  to: Position;
+}
+
+type Steps = Step[];
+type Captures = Capture[];
+interface Moves {
+  steps: Steps;
+  captures: Captures;
+}
 
 interface Piece {
   x: number;
   y: number;
   color: Color;
   isKing: boolean;
-  moves: Position[];
-  captures: { capturePosition: Position; landingPosition: Position }[];
+  moves: Moves;
 }
 
-type Board = (Piece | null)[][];
+interface MoveSet {
+  steps: Map<string, Steps>;
+  captures: Map<string, Captures>;
+}
 
-export type { Position, Color, Piece, Board };
+export type { Position, Color, Piece, Board, Step, Capture, Steps, Captures, MoveSet };
