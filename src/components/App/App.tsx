@@ -5,11 +5,6 @@ import { PieceColor } from '@/store/game-logic/types';
 
 const BOARD_SIZE = 8;
 
-enum PieceColor {
-  dark = 'darkPiece',
-  light = 'lightPiece',
-}
-
 enum SquareColor {
   dark = 'darkPiece',
   light = 'lightPiece',
@@ -32,7 +27,7 @@ interface State {
   currentPlayer: PieceColor;
   playerMustCapture: boolean;
   game: Game;
-  board: Omit<Square, 'piece'>[][]; //Square[][];
+  board: Omit<Square, 'piece'>[][];
 }
 
 type Action =
@@ -127,7 +122,7 @@ const isValidLandingPos = (game: Game, y: number, x: number): boolean => {
   return isMoveInBounds(y, x) && game[y][x] === null;
 };
 
-const isAdjacentOpponent = (current: Piece, adjacent: Piece) => {
+const hasAdjacentOpponent = (current: Piece, adjacent: Piece) => {
   return adjacent?.color && current.color !== adjacent.color;
 };
 
@@ -140,7 +135,7 @@ const getNextPlayer = (currentPlayer: PieceColor) => {
   return currentPlayer === PieceColor.light ? PieceColor.dark : PieceColor.light;
 };
 
-const getSimpleMovesPerPiece = (game: Game, piece: Piece) => {
+const getSimpleMovesForPiece = (game: Game, piece: Piece) => {
   if (!piece) return [];
 
   const movementOptions = piece.isKing ? kingMoveOptions : regularMoveOptions[piece.color];
@@ -161,7 +156,7 @@ const getSimpleMovesPerPiece = (game: Game, piece: Piece) => {
   }, []);
 };
 
-const getValidCapturesPerPiece = (game: Game, piece: Piece): Piece['captures'] => {
+const getValidCapturesForPiece = (game: Game, piece: Piece): Piece['captures'] => {
   if (!piece) return [];
 
   const movementOptions = piece.isKing ? kingMoveOptions : regularMoveOptions[piece.color];
@@ -178,7 +173,7 @@ const getValidCapturesPerPiece = (game: Game, piece: Piece): Piece['captures'] =
     if (!isValidLandingPos(game, jumpY, jumpX)) return acc;
     const adjacentPiece = game[nextY][nextX];
 
-    if (adjacentPiece && isAdjacentOpponent(piece, adjacentPiece)) {
+    if (adjacentPiece && hasAdjacentOpponent(piece, adjacentPiece)) {
       acc.push({
         capturePos: { x: nextX, y: nextY },
         landingPos: { x: jumpX, y: jumpY },
@@ -189,18 +184,18 @@ const getValidCapturesPerPiece = (game: Game, piece: Piece): Piece['captures'] =
   }, []);
 };
 
-const mapAllMovesForCurrentPlayer = (game: Game, currentPlayer: PieceColor): Game => {
+const mapAllMovesForActivePlayer = (game: Game, currentPlayer: PieceColor): Game => {
   return game.map((row) => {
     return row.map((piece) => {
       if (!piece || piece.color !== currentPlayer) {
         return piece?.clearAllMoves() ?? null;
       }
 
-      const validCaptures = getValidCapturesPerPiece(game, piece);
+      const validCaptures = getValidCapturesForPiece(game, piece);
       if (validCaptures.length > 0) {
         return piece.clearAllMoves().clone({ captures: validCaptures });
       } else {
-        const validMoves = getSimpleMovesPerPiece(game, piece);
+        const validMoves = getSimpleMovesForPiece(game, piece);
         return piece.clearAllMoves().clone({ moves: validMoves });
       }
     });
@@ -297,7 +292,7 @@ function reducer(state: State, action: Action): State {
         nextState.game[state.selectedPiece.y][state.selectedPiece.x] = null;
         nextState.selectedPiece = null;
         nextState.currentPlayer = getNextPlayer(state.currentPlayer);
-        nextState.game = mapAllMovesForCurrentPlayer(nextState.game, nextState.currentPlayer);
+        nextState.game = mapAllMovesForActivePlayer(nextState.game, nextState.currentPlayer);
         nextState.playerMustCapture = hasCaptures(nextState.game, nextState.currentPlayer);
         return nextState;
       }
@@ -323,12 +318,12 @@ function reducer(state: State, action: Action): State {
         nextState.selectedPiece = null;
 
         const moreCapturesFound =
-          getValidCapturesPerPiece(nextState.game, pieceAfterMove).length > 0;
+          getValidCapturesForPiece(nextState.game, pieceAfterMove).length > 0;
 
         const nextPlayer = moreCapturesFound
           ? state.currentPlayer
           : getNextPlayer(state.currentPlayer);
-        const nextGameState = mapAllMovesForCurrentPlayer(nextState.game, nextPlayer);
+        const nextGameState = mapAllMovesForActivePlayer(nextState.game, nextPlayer);
         const playerMustCapture = moreCapturesFound || hasCaptures(nextGameState, nextPlayer);
         return {
           ...nextState,
@@ -344,7 +339,7 @@ function reducer(state: State, action: Action): State {
     case 'SET_MODE': {
       return {
         ...state,
-        game: mapAllMovesForCurrentPlayer(state.game, state.currentPlayer),
+        game: mapAllMovesForActivePlayer(state.game, state.currentPlayer),
         mode: action.payload,
       };
     }
