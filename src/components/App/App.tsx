@@ -20,7 +20,7 @@ const kingMoveOptions = {
 };
 
 //A valid square must be inside the board
-const isMoveInBounds = (game: Square[][], y: number, x: number) => {
+const isMoveInBounds = (game: Square[][], y: number, x: number): boolean => {
   const row = game[y];
   if (!row) return false;
   const target = row[x];
@@ -28,11 +28,23 @@ const isMoveInBounds = (game: Square[][], y: number, x: number) => {
 };
 
 //A valid move target must be inside the board and empty
-const isValidMove = (game: Square[][], y: number, x: number) => {
-  return isMoveInBounds(game, y, x) && game[y][x].piece === null;
+const isValidLocation = (game: Square[][], y: number, x: number): boolean => {
+  return isMoveInBounds(game, y, x) && game[y][x].piece === null && game[y][x].color === 'dark';
 };
 
-const calculateValidMoves = (game: Square[][], square: Square) => {
+const isNextOpponent = (current: Square, next: Square) => {
+  return next.piece?.color && current.piece?.color !== next.piece?.color;
+};
+
+const hasCaptures = (game: Square[][], currentPlayer: 'red' | 'black') =>
+  game.some((row) =>
+    row.some(
+      (square) =>
+        square.piece && square.piece.color === currentPlayer && square.piece.captures.length > 0,
+    ),
+  );
+
+const getSimpleMovesPerPiece = (game: Square[][], square: Square) => {
   const piece = square.piece;
   if (!piece) return [] as string[];
 
@@ -40,56 +52,79 @@ const calculateValidMoves = (game: Square[][], square: Square) => {
     ? kingMoveOptions[piece.color]
     : regularMoveOptions[piece.color];
 
-  return movementOptions.reduce((moves, option) => {
+  const moveOptions: string[] = [];
+
+  movementOptions.forEach((option) => {
     const [rowMovement, colMovement] = option;
     const nextY = square.y + rowMovement;
     const nextX = square.x + colMovement;
-    if (isValidMove(game, nextY, nextX)) {
-      return [...moves, getKeyFromCoordinates(nextX, nextY)];
-    }
-    return moves;
-  }, [] as string[]);
-};
 
-const calculateValidJumps = (game: Square[][], square: Square) => {
-  const jumps = [];
-  if (square.piece?.color === 'red') {
-    const adjacentSquare1 = game[square.y + 1]?.[square.x + 1] ?? null;
-    const adjacentSquare2 = game[square.y + 1]?.[square.x - 1] ?? null;
-    if (adjacentSquare1?.piece?.color === 'black') {
-      const jumpSquare = game[square.y + 2]?.[square.x + 2] ?? null;
-      if (jumpSquare?.piece === null) jumps.push(getKeyFromCoordinates(jumpSquare.x, jumpSquare.y));
+    if (isValidLocation(game, nextY, nextX)) {
+      moveOptions.push(getKeyFromCoordinates(nextX, nextY));
     }
-    if (adjacentSquare2?.piece?.color === 'black') {
-      const jumpSquare = game[square.y + 2]?.[square.x - 2] ?? null;
-      if (jumpSquare?.piece === null) jumps.push(getKeyFromCoordinates(jumpSquare.x, jumpSquare.y));
-    }
-  } else if (square.piece?.color === 'black') {
-    const adjacentSquare1 = game[square.y - 1]?.[square.x + 1] ?? null;
-    const adjacentSquare2 = game[square.y - 1]?.[square.x - 1] ?? null;
-    if (adjacentSquare1?.piece?.color === 'red') {
-      const jumpSquare = game[square.y - 2]?.[square.x + 2] ?? null;
-      if (jumpSquare?.piece === null) jumps.push(getKeyFromCoordinates(jumpSquare.x, jumpSquare.y));
-    }
-    if (adjacentSquare2?.piece?.color === 'red') {
-      const jumpSquare = game[square.y - 2]?.[square.x - 2] ?? null;
-      if (jumpSquare?.piece === null) jumps.push(getKeyFromCoordinates(jumpSquare.x, jumpSquare.y));
-    }
-  }
-  return jumps;
-};
-
-const shouldJump = (game: Square[][]) => {
-  let jumps: string[] = [];
-  game.forEach((row) => {
-    row.forEach((square) => {
-      if (calculateValidJumps(game, square).length > 0)
-        jumps.push(getKeyFromCoordinates(square.x, square.y));
-    });
   });
 
-  return jumps;
+  return moveOptions;
 };
+
+const getValidCapturesPerPiece = (game: Square[][], square: Square) => {
+  const piece = square.piece;
+  if (!piece) return [] as string[];
+
+  const movementOptions = piece.isKing
+    ? kingMoveOptions[piece.color]
+    : regularMoveOptions[piece.color];
+
+  const captures: string[] = [];
+
+  movementOptions.forEach((option) => {
+    const [rowMovement, colMovement] = option;
+    const nextY = square.y + rowMovement;
+    const nextX = square.x + colMovement;
+    const jumpY = square.y + rowMovement * 2;
+    const jumpX = square.x + colMovement * 2;
+    if (isMoveInBounds(game, jumpY, jumpX)) {
+      const isJumpAvailable = isValidLocation(game, jumpY, jumpX);
+      if (isNextOpponent(square, game[nextY][nextX]) && isJumpAvailable) {
+        captures.push(getKeyFromCoordinates(nextX, nextY));
+      }
+    }
+  });
+
+  return captures;
+};
+
+const mapAllMovesForCurrentPlayer = (game: Square[][], color: 'red' | 'black') => {
+  return game.map((row) => {
+    return row.map((square) => {
+      if (square.piece?.color === color) {
+        const validCaptures = getValidCapturesPerPiece(game, square);
+        if (validCaptures.length > 0) {
+          return {
+            ...square,
+            piece: {
+              ...square.piece,
+              captures: validCaptures,
+            },
+          };
+        }
+        const validMoves = getSimpleMovesPerPiece(game, square);
+        return {
+          ...square,
+          piece: {
+            ...square.piece,
+            moves: validMoves,
+          },
+        };
+      }
+      return square;
+    });
+  });
+};
+
+// const getCurrentPlayerSquares = (game: Square[][], color: 'red' | 'black') => {
+//   return game.flatMap((row) => row.filter((square) => square.piece?.color === color));
+// };
 
 const isSelected = (square: Square, selectedSquare: Square | null) => {
   return square.x === selectedSquare?.x && square.y === selectedSquare?.y;
@@ -98,6 +133,8 @@ const isSelected = (square: Square, selectedSquare: Square | null) => {
 type Piece = {
   color: 'red' | 'black';
   isKing: boolean;
+  moves: string[];
+  captures: string[];
 };
 
 type Square = {
@@ -110,9 +147,9 @@ type Square = {
 interface State {
   selectedSquare: Square | null;
   validMoves: string[];
-  jumps: string[];
   mode: 'pvp' | 'pvc' | null;
   currentPlayer: 'red' | 'black' | null;
+  mustCapture: boolean;
   game: Square[][];
 }
 
@@ -134,8 +171,8 @@ const getInitialGameState = () => {
       s.y = row;
       if ((row + col) % 2 !== 0) {
         s.color = 'dark';
-        if (row < 3) s.piece = { color: 'red', isKing: false };
-        else if (row > 4) s.piece = { color: 'black', isKing: false };
+        if (row < 3) s.piece = { color: 'red', isKing: false, moves: [], captures: [] };
+        else if (row > 4) s.piece = { color: 'black', isKing: false, moves: [], captures: [] };
       }
     }
   }
@@ -145,19 +182,18 @@ const getInitialGameState = () => {
 const initialState: State = {
   selectedSquare: null,
   validMoves: [],
-  jumps: [],
   mode: null,
   currentPlayer: null,
+  mustCapture: false,
   game: getInitialGameState(),
 };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SELECT_PIECE':
-      console.log({ jumps: state.jumps });
       return {
         ...state,
-        validMoves: calculateValidMoves(state.game, action.payload),
+        // validMoves: getValidMoves(state.game, action.payload),
         selectedSquare: { ...action.payload },
       };
     // if (state.jumps.length > 0) {
@@ -187,15 +223,16 @@ function reducer(state: State, action: Action): State {
         nextState.selectedSquare = null;
         nextState.validMoves = [];
       }
-      const jumps = shouldJump(nextState.game);
-      nextState.jumps = [...jumps];
 
       return nextState;
     case 'SET_MODE':
+      const currentPlayer = 'black';
+
       return {
         ...state,
+        game: mapAllMovesForCurrentPlayer(state.game, currentPlayer),
         mode: action.payload,
-        currentPlayer: null,
+        currentPlayer,
       };
     default:
       return state;
