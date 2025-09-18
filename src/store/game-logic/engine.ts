@@ -74,13 +74,11 @@ const legalCapturesPerPiece = (board: Board, piece: Piece): Captures => {
     if (!isValidLandingSpot(board, landingPosition)) continue;
 
     if (getPiece(board, adjacentPosition)?.color === opponentOf(piece.color)) {
-      return [
-        {
-          from,
-          over: adjacentPosition,
-          to: landingPosition,
-        },
-      ];
+      captures.push({
+        from,
+        over: adjacentPosition,
+        to: landingPosition,
+      });
     }
   }
 
