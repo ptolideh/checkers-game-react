@@ -127,13 +127,12 @@ function reducer(state: State, action: Action): State {
     }
 
     case 'APPLY_MOVE': {
-      const { x, y } = action.payload;
       if (!state.selectedPiece) return state;
       const moves = selectAllMovesPerTurn(state.board, state.currentPlayer);
       const mustCapture = hasCaptures(moves);
       const highlightedSquares = selectHighlightedSquares(state.selectedPiece, moves);
       // TODO- refactor this
-      if (!highlightedSquares.has(positionKey.get({ x, y }))) return state;
+      if (!highlightedSquares.has(positionKey.get(action.payload))) return state;
 
       if (mustCapture) {
         const res = applyCaptureMove(state.board, moves, state.selectedPiece, action.payload);
@@ -206,17 +205,9 @@ export const App: React.FC = () => {
       return;
     }
 
-    if (!mustCapture && highlightedSquares?.has(targetKey)) {
+    if (highlightedSquares?.has(targetKey)) {
       dispatch({
         type: 'APPLY_MOVE',
-        payload: target,
-      });
-      return;
-    }
-
-    if (mustCapture && highlightedSquares?.has(targetKey)) {
-      dispatch({
-        type: 'CAPTURE_PIECE',
         payload: target,
       });
     }

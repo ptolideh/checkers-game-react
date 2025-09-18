@@ -180,7 +180,7 @@ const selectHighlightedSquares = (selected: Piece, legalMoves: MoveSet): Set<str
 
   if (mustCapture) {
     for (let capture of legalMoves.captures.get(selectedKey) || []) {
-      highlightedSquares.add(positionKey.get(capture.over));
+      highlightedSquares.add(positionKey.get(capture.to));
     }
   } else {
     for (let step of legalMoves.steps.get(selectedKey) || []) {
