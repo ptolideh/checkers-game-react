@@ -1,8 +1,6 @@
 import { cn } from '@/lib/utils';
 import { useReducer } from 'react';
 
-const getKeyFromCoordinates = (x: number, y: number) => `${x}:${y}`;
-
 const regularMoveOptions = {
   red: [
     [1, 1],
@@ -12,6 +10,11 @@ const regularMoveOptions = {
     [-1, 1],
     [-1, -1],
   ],
+};
+
+type Position = {
+  x: number;
+  y: number;
 };
 
 const kingMoveOptions = {
@@ -46,30 +49,47 @@ const hasCaptures = (game: Square[][], currentPlayer: 'red' | 'black') =>
 
 const getSimpleMovesPerPiece = (game: Square[][], square: Square) => {
   const piece = square.piece;
-  if (!piece) return [] as string[];
+  if (!piece) return [];
 
   const movementOptions = piece.isKing
     ? kingMoveOptions[piece.color]
     : regularMoveOptions[piece.color];
 
-  const moveOptions: string[] = [];
-
-  movementOptions.forEach((option) => {
+  return movementOptions.reduce<Position[]>((acc, option) => {
     const [rowMovement, colMovement] = option;
     const nextY = square.y + rowMovement;
     const nextX = square.x + colMovement;
 
     if (isValidLandingPos(game, nextY, nextX)) {
-      moveOptions.push(getKeyFromCoordinates(nextX, nextY));
+      acc.push({
+        x: nextX,
+        y: nextY,
+      });
     }
-  });
 
-  return moveOptions;
+    return acc;
+  }, []);
 };
 
+//   movementOptions.forEach((option) => {
+//     const [rowMovement, colMovement] = option;
+//     const nextY = square.y + rowMovement;
+//     const nextX = square.x + colMovement;
+
+//     if (isValidLandingPos(game, nextY, nextX)) {
+//       moveOptions.push({
+//         x: nextX,
+//         y: nextY,
+//       });
+//     }
+//   });
+
+//   return moveOptions;
+// };
+
 type CaptureOption = {
-  capturePos: string;
-  landingPos: string;
+  capturePos: Position;
+  landingPos: Position;
 };
 
 const getValidCapturesPerPiece = (game: Square[][], square: Square): CaptureOption[] => {
@@ -95,8 +115,8 @@ const getValidCapturesPerPiece = (game: Square[][], square: Square): CaptureOpti
     if (!isNextOpponent(square, adjacentSquare)) return acc;
 
     acc.push({
-      capturePos: getKeyFromCoordinates(nextX, nextY),
-      landingPos: getKeyFromCoordinates(jumpX, jumpY),
+      capturePos: { x: nextX, y: nextY },
+      landingPos: { x: jumpX, y: jumpY },
     });
 
     return acc;
@@ -118,7 +138,7 @@ const mapAllMovesForCurrentPlayer = (game: Square[][], color: 'red' | 'black') =
               captures: validCaptures,
               moves: [],
             },
-          };
+          } as Square;
         }
         const validMoves = getSimpleMovesPerPiece(game, square);
         return {
@@ -128,7 +148,7 @@ const mapAllMovesForCurrentPlayer = (game: Square[][], color: 'red' | 'black') =
             moves: validMoves,
             captures: [],
           },
-        };
+        } as Square;
       }
 
       return {
@@ -159,13 +179,11 @@ const isSelectablePiece = (square: Square, playerMustCapture: boolean) => {
 type Piece = {
   color: 'red' | 'black';
   isKing: boolean;
-  moves: string[];
+  moves: Position[];
   captures: CaptureOption[];
 };
 
-type Square = {
-  x: number;
-  y: number;
+type Square = Position & {
   color: 'dark' | 'light';
   piece: Piece | null;
 };
@@ -220,39 +238,11 @@ function reducer(state: State, action: Action): State {
     case 'SELECT_PIECE': {
       if (!isSelectablePiece(action.payload, state.mustCapture)) return state;
 
-      const nextSelectedSquare = {
-        ...action.payload,
-        piece: {
-          ...(action.payload.piece as Piece),
-        },
-      };
-
-      if (nextSelectedSquare.piece.captures.length > 0) {
-        const updatedMoves = [] as string[];
-
-        nextSelectedSquare.piece.captures.forEach((captureOption) => {
-          updatedMoves.push(captureOption.landingPos);
-        });
-
-        nextSelectedSquare.piece.moves = Array.from(updatedMoves);
-      }
-
       return {
         ...state,
-        selectedSquare: nextSelectedSquare,
+        selectedSquare: { ...action.payload },
       };
     }
-
-    // if (state.jumps.length > 0) {
-    //   if (state.jumps.includes(getKeyFromCoordinates(action.payload.x, action.payload.y))) {
-    //     return {
-    //       ...state,
-    //       selectedSquare: { ...action.payload },
-    //     };
-    //   }
-    //   return state;
-    // } else {
-    // }
     case 'DESELECT_PIECE':
       return {
         ...state,
@@ -377,12 +367,12 @@ export const App: React.FC = () => {
                   square.color === 'dark' ? 'bg-orange-900' : 'bg-orange-100',
                   {
                     'bg-green-300':
-                      state.selectedSquare?.piece?.moves.includes(
-                        getKeyFromCoordinates(square.x, square.y),
+                      state.selectedSquare?.piece?.moves.some(
+                        (move) => move.x === square.x && move.y === square.y,
                       ) ||
                       state.selectedSquare?.piece?.captures.some(
                         (capture) =>
-                          capture.landingPos === getKeyFromCoordinates(square.x, square.y),
+                          capture.landingPos.x === square.x && capture.landingPos.y === square.y,
                       ),
                   },
                   {
@@ -398,8 +388,8 @@ export const App: React.FC = () => {
                     dispatch({ type: 'SELECT_PIECE', payload: square });
                   } else if (
                     !state.mustCapture &&
-                    state.selectedSquare?.piece?.moves.includes(
-                      getKeyFromCoordinates(square.x, square.y),
+                    state.selectedSquare?.piece?.moves.some(
+                      (move) => move.x === square.x && move.y === square.y,
                     )
                   ) {
                     dispatch({
@@ -409,7 +399,8 @@ export const App: React.FC = () => {
                   } else if (
                     state.mustCapture &&
                     state.selectedSquare?.piece?.captures.some(
-                      (capture) => capture.landingPos === getKeyFromCoordinates(square.x, square.y),
+                      (capture) =>
+                        capture.landingPos.x === square.x && capture.landingPos.y === square.y,
                     )
                   ) {
                     dispatch({
