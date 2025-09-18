@@ -15,4 +15,15 @@ const isMoveInBounds = (boardSize: number, at: Position) => {
   return at.x >= 0 && at.x < boardSize && at.y >= 0 && at.y < boardSize;
 };
 
-export { getPiece, getOffsetsFor, isMoveInBounds };
+const equals = (a: Position, b: Position) => a.x === b.x && a.y === b.y;
+
+const positionKey = {
+  separator: ':',
+  get: ({ x, y }: Position) => `${x}${positionKey.separator}${y}`,
+  parse: (key: string): Position => {
+    const [x, y] = key.split(positionKey.separator).map(Number);
+    return { x, y };
+  },
+} as const;
+
+export { getPiece, getOffsetsFor, isMoveInBounds, equals, positionKey };
