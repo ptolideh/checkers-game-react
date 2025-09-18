@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { useReducer } from 'react';
 import { CheckersPiece } from '../CheckersPiece';
-import type { Color, Position } from '@/store/game-logic/types';
+import type { Color, Position, Board, Piece } from '@/store/game-logic/types';
 import { forwardMovementOffsets, kingMovementOffsets, PieceColor } from '@/store/game-logic/rules';
 
 const BOARD_SIZE = 8;
@@ -14,8 +14,6 @@ enum SquareColor {
 type Square = Position & {
   color: SquareColor;
 };
-
-type Board = (Piece | null)[][];
 
 interface State {
   selectedPiece: Piece | null;
@@ -33,56 +31,15 @@ type Action =
   | { type: 'CAPTURE_PIECE'; payload: Piece['captures'][number] }
   | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' };
 
-class Piece {
-  x: number;
-  y: number;
-  color: Color;
-  isKing: boolean;
-  moves: Position[];
-  captures: { capturePos: Position; landingPos: Position }[];
-
-  constructor({
-    x = 0,
-    y = 0,
-    color = PieceColor.light,
-    isKing = false,
-    moves = [],
-    captures = [],
-  }: Partial<Piece>) {
-    this.x = x;
-    this.y = y;
-    this.color = color;
-    this.isKing = shouldPromoteToKing(color, y);
-    this.moves = [...moves];
-    this.captures = [...captures];
-  }
-
-  clone(overrides: Partial<Piece> = {}): Piece {
-    return new Piece({
-      x: overrides.x ?? this.x,
-      y: overrides.y ?? this.y,
-      color: overrides.color ?? this.color,
-      isKing: overrides.isKing ?? shouldPromoteToKing(this.color, this.y),
-      moves: overrides.moves ?? [...this.moves],
-      captures: overrides.captures ?? [...this.captures],
-    });
-  }
-
-  clearAllMoves() {
-    return this.clone({ moves: [], captures: [] });
-  }
-
-  shouldPromoteToKing(): boolean {
-    if (this.isKing) return true;
-    if (
-      (this.color === PieceColor.light && this.y === BOARD_SIZE - 1) ||
-      (this.color === PieceColor.dark && this.y === 0)
-    ) {
-      return true;
-    }
-    return false;
-  }
-}
+// shouldPromoteToKing(color: Color, y: number): boolean {
+//   if (
+//     (color === PieceColor.light && y === BOARD_SIZE - 1) ||
+//     (color === PieceColor.dark && y === 0)
+//   ) {
+//     return true;
+//   }
+//   return false;
+// }
 
 //A valid square must be inside the board
 const isMoveInBounds = (y: number, x: number): boolean => {
@@ -158,15 +115,29 @@ const mapAllMovesForActivePlayer = (board: Board, currentPlayer: Color): Board =
   return board.map((row) => {
     return row.map((piece) => {
       if (!piece || piece.color !== currentPlayer) {
-        return piece?.clearAllMoves() ?? null;
+        return piece
+          ? {
+              ...piece,
+              moves: [],
+              captures: [],
+            }
+          : null;
       }
 
       const validCaptures = getValidCapturesForPiece(board, piece);
       if (validCaptures.length > 0) {
-        return piece.clearAllMoves().clone({ captures: validCaptures });
+        return {
+          ...piece,
+          captures: validCaptures,
+          moves: [],
+        };
       } else {
         const validMoves = getSimpleMovesForPiece(board, piece);
-        return piece.clearAllMoves().clone({ moves: validMoves });
+        return {
+          ...piece,
+          moves: validMoves,
+          captures: [],
+        };
       }
     });
   });
@@ -206,10 +177,24 @@ const getInitialBoardAndSquaresState = () => {
       if ((row + col) % 2 !== 0) {
         square.color = SquareColor.dark;
         if (row < 3) {
-          board[row][col] = new Piece({ x: col, y: row, color: PieceColor.light });
+          board[row][col] = {
+            x: col,
+            y: row,
+            color: PieceColor.light,
+            isKing: false,
+            moves: [],
+            captures: [],
+          };
         }
         if (row > 4) {
-          board[row][col] = new Piece({ x: col, y: row, color: PieceColor.dark });
+          board[row][col] = {
+            x: col,
+            y: row,
+            color: PieceColor.dark,
+            isKing: false,
+            moves: [],
+            captures: [],
+          };
         }
       }
     }
@@ -232,10 +217,9 @@ function reducer(state: State, action: Action): State {
       // debugger;
       const matchingPiece = state.board[y][x];
       if (matchingPiece && isSelectablePiece(matchingPiece, state.playerMustCapture)) {
-        const selectedPiece = matchingPiece.clone();
         return {
           ...state,
-          selectedPiece,
+          selectedPiece: { ...matchingPiece },
         };
       }
 
@@ -252,12 +236,13 @@ function reducer(state: State, action: Action): State {
       const { x, y } = action.payload;
       if (state.selectedPiece && !state.playerMustCapture) {
         const nextState = { ...state, board: [...state.board].map((row) => [...row]) };
-        const pieceAfterMove = state.selectedPiece
-          .clone({
-            x,
-            y,
-          })
-          .clearAllMoves();
+        const pieceAfterMove = {
+          ...state.selectedPiece,
+          x,
+          y,
+          moves: [],
+          captures: [],
+        };
         nextState.board[y][x] = pieceAfterMove;
         nextState.board[state.selectedPiece.y][state.selectedPiece.x] = null;
         nextState.selectedPiece = null;
@@ -275,13 +260,14 @@ function reducer(state: State, action: Action): State {
         const { capturePos, landingPos } = action.payload;
         // debugger;
         const nextState = { ...state, board: [...state.board].map((row) => [...row]) };
-        const pieceAfterMove = state.selectedPiece
-          .clone({
-            x: landingPos.x,
-            y: landingPos.y,
-          })
-          .clearAllMoves();
 
+        const pieceAfterMove = {
+          ...state.selectedPiece,
+          x: landingPos.x,
+          y: landingPos.y,
+          moves: [],
+          captures: [],
+        };
         nextState.board[landingPos.y][landingPos.x] = pieceAfterMove;
         nextState.board[state.selectedPiece.y][state.selectedPiece.x] = null;
         nextState.board[capturePos.y][capturePos.x] = null;

@@ -10,9 +10,10 @@ interface Piece {
   y: number;
   color: Color;
   isKing: boolean;
+  moves: Position[];
   captures: { capturePos: Position; landingPos: Position }[];
 }
 
 type Board = (Piece | null)[][];
 
-export type { Position, Color };
+export type { Position, Color, Piece, Board };
