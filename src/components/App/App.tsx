@@ -2,6 +2,8 @@ import { cn } from '@/lib/utils';
 import { get } from 'http';
 import { useReducer } from 'react';
 
+const BOARD_SIZE = 8;
+
 enum PieceColor {
   dark = 'darkPiece',
   light = 'lightPiece',
@@ -22,11 +24,11 @@ type CaptureOption = {
   landingPos: Position;
 };
 
-type Piece = {
+type Piece = Partial<Position> & {
   color: PieceColor;
   isKing: boolean;
   moves: Position[];
-  captures: CaptureOption[];
+  captures: { capturePos: Position; landingPos: Position }[];
 };
 
 type Square = Position & {
@@ -40,7 +42,7 @@ interface State {
   currentPlayer: PieceColor;
   playerMustCapture: boolean;
   game: Square[][];
-  board: Square[][];
+  board: Omit<Square, 'piece'>[][]; //Square[][];
 }
 
 type Action =
@@ -48,8 +50,7 @@ type Action =
   | { type: 'DESELECT_PIECE' }
   | { type: 'MOVE_PIECE'; payload: Square }
   | { type: 'CAPTURE_PIECE'; payload: CaptureOption }
-  | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' }
-  | { type: 'SET_PLAYER_COLOR'; payload: PieceColor };
+  | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' };
 
 const regularMoveOptions: Record<PieceColor, number[][]> = {
   lightPiece: [
@@ -62,31 +63,28 @@ const regularMoveOptions: Record<PieceColor, number[][]> = {
   ],
 };
 
-const kingMoveOptions: Record<PieceColor, number[][]> = {
-  lightPiece: [...regularMoveOptions.lightPiece, [-1, 1], [-1, -1]],
-  darkPiece: [...regularMoveOptions.darkPiece, [1, 1], [1, -1]],
-};
+const kingMoveOptions: number[][] = [
+  [-1, 1],
+  [-1, -1],
+  [1, 1],
+  [1, -1],
+];
 
 const shouldPromoteToKing = (piece: Piece, targetRow: number) => {
   if (piece.isKing) return false;
-  if (piece.color === PieceColor.light && targetRow === 7) return true;
+  if (piece.color === PieceColor.light && targetRow === BOARD_SIZE - 1) return true;
   if (piece.color === PieceColor.dark && targetRow === 0) return true;
   return false;
 };
 
 //A valid square must be inside the board
-const isMoveInBounds = (game: Square[][], y: number, x: number): boolean => {
-  const row = game[y];
-  if (!row) return false;
-  const target = row[x];
-  return Boolean(target);
+const isMoveInBounds = (y: number, x: number): boolean => {
+  return y >= 0 && y < BOARD_SIZE && x >= 0 && x < BOARD_SIZE;
 };
 
 //A valid move target must be inside the board and empty
 const isValidLandingPos = (game: Square[][], y: number, x: number): boolean => {
-  return (
-    isMoveInBounds(game, y, x) && game[y][x].piece === null && game[y][x].color === SquareColor.dark
-  );
+  return isMoveInBounds(y, x) && game[y][x].piece === null && game[y][x].color === SquareColor.dark;
 };
 
 const isNextOpponent = (current: Square, next: Square) => {
@@ -109,9 +107,7 @@ const getSimpleMovesPerPiece = (game: Square[][], square: Square) => {
   const piece = square.piece;
   if (!piece) return [];
 
-  const movementOptions = piece.isKing
-    ? kingMoveOptions[piece.color]
-    : regularMoveOptions[piece.color];
+  const movementOptions = piece.isKing ? kingMoveOptions : regularMoveOptions[piece.color];
 
   return movementOptions.reduce<Position[]>((acc, option) => {
     const [rowMovement, colMovement] = option;
@@ -133,9 +129,7 @@ const getValidCapturesPerPiece = (game: Square[][], square: Square): CaptureOpti
   const piece = square.piece;
   if (!piece) return [];
 
-  const movementOptions = piece.isKing
-    ? kingMoveOptions[piece.color]
-    : regularMoveOptions[piece.color];
+  const movementOptions = piece.isKing ? kingMoveOptions : regularMoveOptions[piece.color];
 
   return movementOptions.reduce<CaptureOption[]>((acc, option) => {
     const [rowMovement, colMovement] = option;
@@ -144,8 +138,8 @@ const getValidCapturesPerPiece = (game: Square[][], square: Square): CaptureOpti
     const jumpY = square.y + rowMovement * 2;
     const jumpX = square.x + colMovement * 2;
 
-    if (!isMoveInBounds(game, nextY, nextX)) return acc;
-    if (!isMoveInBounds(game, jumpY, jumpX)) return acc;
+    if (!isMoveInBounds(nextY, nextX)) return acc;
+    if (!isMoveInBounds(jumpY, jumpX)) return acc;
     if (!isValidLandingPos(game, jumpY, jumpX)) return acc;
 
     const adjacentSquare = game[nextY][nextX];
@@ -214,11 +208,17 @@ const isSelectablePiece = (square: Square, playerMustCapture: boolean) => {
 };
 
 const getInitialGameState = () => {
-  const game: Square[][] = Array.from({ length: 8 }, () =>
-    Array.from({ length: 8 }, () => ({ x: 0, y: 0, color: SquareColor.light, piece: null })),
+  const game: Square[][] = Array.from({ length: BOARD_SIZE }, () =>
+    Array.from({ length: BOARD_SIZE }, () => ({
+      x: 0,
+      y: 0,
+      color: SquareColor.light,
+      piece: null,
+    })),
   );
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
+
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    for (let col = 0; col < BOARD_SIZE; col++) {
       const s = game[row][col];
       s.x = col;
       s.y = row;
