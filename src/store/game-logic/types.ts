@@ -20,10 +20,6 @@ interface Capture {
 
 type Steps = Step[];
 type Captures = Capture[];
-interface Moves {
-  steps: Steps;
-  captures: Captures;
-}
 
 interface Piece {
   x: number;
@@ -39,12 +35,20 @@ interface MoveSet {
 
 type MoveTargetKeys = Set<string>;
 
+interface PlayerStats {
+  moves: number;
+  captures: number;
+}
+
+type Stats = Record<Color, PlayerStats>;
+
 interface GameState {
   selectedPiece: Piece | null;
   mode: 'pvp' | 'pvc' | null;
   currentPlayer: Color;
   board: Board;
   forcedCaptureKey: string | null;
+  stats: Stats;
 }
 
 export type {
@@ -59,4 +63,6 @@ export type {
   MoveSet,
   MoveTargetKeys,
   GameState,
+  PlayerStats,
+  Stats,
 };

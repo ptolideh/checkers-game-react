@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import React, { useReducer } from 'react';
 import { CheckersPiece } from '../CheckersPiece';
-import type { Position, Board, GameState } from '@/store/game-logic/types';
+import type { Position, Board, GameState, Stats } from '@/store/game-logic/types';
 import { PieceColor } from '@/store/game-logic/rules';
 import { equals, getPiece, isDarkSquare, positionKey } from '@/store/game-logic/utils';
 import {
@@ -80,6 +80,10 @@ const initialState: GameState = {
   currentPlayer: PieceColor.dark,
   ...getInitialBoardAndSquaresState(),
   forcedCaptureKey: null,
+  stats: {
+    [PieceColor.dark]: { moves: 0, captures: 0 },
+    [PieceColor.light]: { moves: 0, captures: 0 },
+  } as Stats,
 };
 
 function reducer(state: GameState, action: Action): GameState {
