@@ -8,6 +8,7 @@ import type {
   MoveTargetKeys,
   Piece,
   Position,
+  Stats,
   Steps,
 } from './types';
 import { cloneBoard, equals, getOffsetsFor, getPiece, isMoveInBounds, positionKey } from './utils';
@@ -246,6 +247,21 @@ const applyCaptureMove = (board: Board, moves: MoveSet, selectedPiece: Piece, ta
   return { newBoard, captured: capture.over, destination: capture.to };
 };
 
+const incrementStatsFor = (
+  stats: Stats,
+  color: Color,
+  change: Partial<{ moves: number; captures: number }>,
+): Stats => {
+  const player = stats[color];
+  return {
+    ...stats,
+    [color]: {
+      moves: player.moves + (change.moves ?? 0),
+      captures: player.captures + (change.captures ?? 0),
+    },
+  };
+};
+
 export {
   legalStepsPerPiece,
   legalCapturesPerPiece,
@@ -257,4 +273,5 @@ export {
   getNextPlayer,
   applySimpleMove,
   applyCaptureMove,
+  incrementStatsFor,
 };

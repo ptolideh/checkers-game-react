@@ -13,6 +13,7 @@ import {
   selectMoveTargetsFor,
   selectInteractivityState,
   isInMoveTargets,
+  incrementStatsFor,
 } from '@/store/game-logic/engine';
 
 const BOARD_SIZE = 8;
@@ -146,6 +147,7 @@ function reducer(state: GameState, action: Action): GameState {
             selectedPiece: { ...pieceAtDestination },
             forcedCaptureKey: destinationKey,
             currentPlayer: state.currentPlayer,
+            stats: incrementStatsFor(state.stats, state.currentPlayer, { captures: 1 }),
           };
         } else {
           // otherwise, update the board as is and switch players
@@ -154,17 +156,20 @@ function reducer(state: GameState, action: Action): GameState {
             selectedPiece: null,
             forcedCaptureKey: null,
             currentPlayer: getNextPlayer(state.currentPlayer),
+            stats: incrementStatsFor(state.stats, state.currentPlayer, { moves: 1, captures: 1 }),
           };
         }
       } else {
         const res = applySimpleMove(state.board, moves, state.selectedPiece, action.payload);
         if (!res) return state;
+        const statsAfterMove = incrementStatsFor(state.stats, state.currentPlayer, { moves: 1 });
         return {
           ...state,
           board: res.newBoard,
           selectedPiece: null,
           forcedCaptureKey: null,
           currentPlayer: getNextPlayer(state.currentPlayer),
+          stats: statsAfterMove,
         };
       }
     }
