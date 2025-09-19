@@ -12,6 +12,7 @@ import { gameReducer, initialGameState } from '@/game-logic/reducer';
 import { GameActions } from '@/game-logic/state.actions';
 import { useComputerTurn } from '@/hooks/useComputerTurn';
 import { Layout } from './Layout';
+import { AI_PLAYER_COLOR, GameModes } from '@/game-logic/rules';
 
 export const App: React.FC = () => {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
@@ -23,6 +24,9 @@ export const App: React.FC = () => {
   const currPlayerPieces = React.useMemo(() => {
     return selectInteractivityState(state);
   }, [state.board, state.currentPlayer, state.forcedCaptureKey]);
+
+  const isLocalPlayerTurn =
+    state.mode !== GameModes.PlayerVsComputer || state.currentPlayer !== AI_PLAYER_COLOR;
 
   const selectTargetsForPiece = React.useCallback(
     (piece: Piece | null) => {
@@ -104,6 +108,7 @@ export const App: React.FC = () => {
         selectedPiece={state.selectedPiece}
         moveTargets={moveTargetsForSelection}
         currPlayerPieces={currPlayerPieces}
+        isLocalPlayerTurn={isLocalPlayerTurn}
         onSquareSelect={handleSquareSelect}
         onPieceSelect={handlePieceSelect}
         winner={state.winner}

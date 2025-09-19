@@ -21,6 +21,7 @@ interface BoardViewProps {
   selectedPiece: Piece | null;
   moveTargets: MoveTargetKeys | null;
   currPlayerPieces: InteractiveState;
+  isLocalPlayerTurn: boolean;
   onSquareSelect: (position: Position) => void;
   onPieceSelect: (position: Position) => void;
   winner: Winner;
@@ -31,11 +32,13 @@ const BoardView: React.FC<BoardViewProps> = ({
   selectedPiece,
   moveTargets,
   currPlayerPieces,
+  isLocalPlayerTurn,
   onSquareSelect,
   onPieceSelect,
   winner,
 }) => {
-  const isInteractive = !winner;
+  const isGameInteractive = !winner;
+  const isPlayerTurn = isLocalPlayerTurn && isGameInteractive;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -46,13 +49,13 @@ const BoardView: React.FC<BoardViewProps> = ({
   const [activePiece, setActivePiece] = React.useState<Piece | null>(null);
 
   const isSquareDisabled = (position: Position) => {
-    if (!isInteractive) return true;
+    if (!isPlayerTurn) return true;
     if (!isInMoveTargets(moveTargets, position)) return true;
     return false;
   };
 
   const isPieceDisabled = (position: Position) => {
-    if (!isInteractive) return true;
+    if (!isPlayerTurn) return true;
     const key = positionKey.get(position);
     if (!currPlayerPieces.selectable.has(key)) return true;
     return false;
@@ -60,7 +63,7 @@ const BoardView: React.FC<BoardViewProps> = ({
 
   const handleDragStart = React.useCallback(
     (event: DragStartEvent) => {
-      if (!isInteractive) return;
+      if (!isPlayerTurn) return;
       const piece = event.active.data.current?.piece as Piece | undefined;
       if (!piece) return;
       const { x, y } = piece;
@@ -68,7 +71,7 @@ const BoardView: React.FC<BoardViewProps> = ({
       setActivePiece(piece);
       onPieceSelect({ x, y });
     },
-    [isInteractive, onPieceSelect],
+    [isPlayerTurn, onPieceSelect],
   );
 
   const handleDragEnd = React.useCallback(
@@ -76,13 +79,13 @@ const BoardView: React.FC<BoardViewProps> = ({
       setActivePiece(null);
       const overId = event.over?.id;
       const piece = event.active.data.current?.piece as Piece | undefined;
-      if (!isInteractive || !piece) return;
+      if (!isPlayerTurn || !piece) return;
       if (!overId) return;
       const targetPosition = positionKey.parse(String(overId));
       if (!isInMoveTargets(moveTargets, targetPosition)) return;
       onSquareSelect(targetPosition);
     },
-    [isInteractive, moveTargets, onSquareSelect],
+    [isPlayerTurn, moveTargets, onSquareSelect],
   );
 
   const handleDragCancel = React.useCallback((_event: DragCancelEvent) => {
@@ -107,7 +110,7 @@ const BoardView: React.FC<BoardViewProps> = ({
     >
       <div
         className={cn('relative flex flex-col w-fit overflow-hidden', frameStyle, {
-          'pointer-events-none opacity-80': !isInteractive,
+          'pointer-events-none opacity-80': !isGameInteractive,
         })}
       >
         {board.map((row, rowIndex) => (
@@ -121,7 +124,8 @@ const BoardView: React.FC<BoardViewProps> = ({
               let pieceNode: React.ReactNode = null;
               if (piece) {
                 const pieceDisabled = isPieceDisabled(piece);
-                const pieceInteractive = currPlayerPieces.selectable.has(key);
+                const pieceInteractive =
+                  isPlayerTurn && currPlayerPieces.selectable.has(key);
                 const pieceDimmed = currPlayerPieces.disabled.has(key);
                 const pieceSelected = !!selectedPiece && equals(piece, selectedPiece);
 
@@ -135,7 +139,7 @@ const BoardView: React.FC<BoardViewProps> = ({
                     isDisabled={pieceDisabled}
                     isDimmed={pieceDimmed}
                     isInteractive={pieceInteractive}
-                    dragDisabled={!isInteractive || pieceDisabled}
+                    dragDisabled={!isPlayerTurn || pieceDisabled}
                     onSelect={onPieceSelect}
                   />
                 );
