@@ -39,6 +39,14 @@ interface MoveSet {
 
 type MoveTargetKeys = Set<string>;
 
+interface GameState {
+  selectedPiece: Piece | null;
+  mode: 'pvp' | 'pvc' | null;
+  currentPlayer: Color;
+  board: Board;
+  forcedCaptureKey: string | null;
+}
+
 export type {
   Position,
   Color,
@@ -50,4 +58,5 @@ export type {
   Captures,
   MoveSet,
   MoveTargetKeys,
+  GameState,
 };
