@@ -17,7 +17,7 @@ export interface BoardSquareProps {
 
 // Renders each square on the board
 // Handles movement target selection and drops
-export const BoardSquare = React.memo<BoardSquareProps>(
+const BoardSquare = React.memo<BoardSquareProps>(
   ({ x, y, isTarget, isDisabled, onSquareSelect, droppableId, dropDisabled = false, children }) => {
     const position = { x, y };
 
@@ -52,4 +52,4 @@ export const BoardSquare = React.memo<BoardSquareProps>(
   },
 );
 
-BoardSquare.displayName = 'BoardSquare';
+export { BoardSquare };
