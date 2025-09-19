@@ -284,7 +284,7 @@ export const App: React.FC = () => {
   return (
     <div className="p-4">
       <h1 className="text-xl font-semibold mb-2">Checkers Game</h1>
-      <div className="text-sm mb-4">
+      <div className="flex items-center gap-4 text-sm mb-4">
         <span className="mr-3">
           Mode: {state.mode === 'pvp' ? 'Two Players (PvP)' : 'Single Player (PvC)'}
         </span>
@@ -297,8 +297,25 @@ export const App: React.FC = () => {
         <span>
           Black — Moves: {state.stats.dark.moves}, Captures: {state.stats.dark.captures}
         </span>
+        <button
+          className="ml-auto px-3 py-1 rounded border border-black hover:bg-gray-100"
+          onClick={() => dispatch({ type: 'NEW_GAME' })}
+        >
+          {state.winner ? 'New Game' : 'Restart'}
+        </button>
       </div>
-      <div className="flex flex-col border border-black w-fit">
+      {state.winner && (
+        <div className="mb-4 p-3 border border-green-700 bg-green-100 text-green-900 rounded">
+          {state.winner === 'draw'
+            ? 'The game ended in a draw. Great match!'
+            : `${state.winner === PieceColor.light ? 'Red' : 'Black'} wins the game!`}
+        </div>
+      )}
+      <div
+        className={cn('flex flex-col border border-black w-fit', {
+          'pointer-events-none opacity-80': !!state.winner,
+        })}
+      >
         {state.board?.map((row, rowIndex) => (
           <div key={rowIndex} className="flex border-t-black border-b-black items-center">
             {row.map((piece, columnIndex) => (
