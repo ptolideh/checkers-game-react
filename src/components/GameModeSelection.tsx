@@ -10,10 +10,12 @@ interface GameModeButtonProps {
 
 const GameModeButton: React.FC<GameModeButtonProps> = ({ icon, label, onClick }) => (
   <button
+    type="button"
     className="flex flex-col gap-2 justify-center items-center px-4 py-8 w-full sm:w-1/2 transition-all rounded-3xl drop-shadow-xl drop-shadow-slate-800 border border-slate-950 bg-slate-800 hover:bg-slate-900  hover:cursor-pointer  focus-visible:outline-offset-2 focus-visible:outline-slate-200"
     onClick={onClick}
+    aria-label={`Start ${label} game`}
   >
-    <span className="text-3xl" aria-hidden>
+    <span className="text-3xl" aria-hidden="true">
       {icon}
     </span>
     <span>{label}</span>

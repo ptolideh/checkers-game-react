@@ -8,11 +8,11 @@ const Layout = React.memo<PropsWithChildren>(({ children }) => {
     <>
       <div className="flex items-center">
         <span
-          aria-hiddens
+          aria-hidden="true"
           className="relative z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500"
         />
         <span
-          aria-hiddens
+          aria-hidden="true"
           className="relative -left-4 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-950"
         />
       </div>
