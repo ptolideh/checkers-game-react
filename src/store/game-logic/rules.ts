@@ -10,7 +10,7 @@ const PieceColor: Record<Color, Color> = {
 const GameModes: Record<GameMode, GameMode> = {
   PlayerVsPlayer: 'PlayerVsPlayer',
   PlayerVsComputer: 'PlayerVsComputer',
-};
+} as const;
 
 const kingMovementOffsets: ReadonlyArray<Position> = [
   { x: -1, y: +1 },

@@ -23,9 +23,9 @@ export const BoardSquare = React.memo<BoardSquareProps>(
     return (
       <div
         className={cn(
-          'border border-l-black border-r-black size-10 flex justify-center items-center',
-          isDarkSquare(position) ? 'bg-orange-900' : 'bg-orange-100',
-          { 'bg-green-300': isTarget },
+          'border border-l-black border-r-black size-10 flex justify-center items-center transition-[background-color,box-shadow] duration-[250ms,200ms] ease-in-out',
+          isDarkSquare(position) ? 'bg-green-800' : 'bg-orange-100',
+          { 'bg-green-300 inset-ring-4 inset-ring-green-500': isTarget },
           { 'cursor-pointer': !isDisabled },
         )}
         onClick={handleClick}

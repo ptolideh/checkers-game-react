@@ -2,6 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import type {
   Board,
+  Color,
   InteractiveState,
   MoveTargetKeys,
   Piece,
@@ -79,7 +80,9 @@ export const BoardView: React.FC<BoardViewProps> = ({
                     color={piece.color}
                     isKing={piece.isKing}
                     isSelected={isPieceSelected(piece)}
-                    isDisabled={isPieceDisabled(position)}
+                    isDisabled={isPieceDisabled(piece)}
+                    isDimmed={currPlayerPieces.disabled.has(key)}
+                    isInteractive={currPlayerPieces.selectable.has(key)}
                     onSelect={onPieceSelect}
                   />
                 ) : null}
