@@ -8,7 +8,7 @@ import {
   selectMoveTargetsFor,
   selectInteractivityState,
 } from '@/game-logic/engine';
-import { gameReducer, initialGameState } from '@/game-logic/reducer';
+import { gameReducer, initialGameState } from '@/game-logic/state.reducer';
 import { GameActions } from '@/game-logic/state.actions';
 import { useComputerTurn } from '@/hooks/useComputerTurn';
 import { Layout } from './Layout';
