@@ -9,6 +9,7 @@ interface GameStatsProps {
   currentPlayer: Color;
   stats: Stats;
   winner: Winner;
+  onRestart: () => void;
 }
 
 const formatModeLabel = (mode: GameMode) => {
@@ -25,8 +26,16 @@ const formatWinnerMessage = (winner: Winner) => {
   return `${formatPlayerName(winner)} wins the game!`;
 };
 
-const GameStats: React.FC<GameStatsProps> = ({ mode, currentPlayer, stats, winner }) => {
+const GameStats: React.FC<GameStatsProps> = ({ mode, currentPlayer, stats, winner, onRestart }) => {
   const winnerMessage = formatWinnerMessage(winner);
+  const winnerMessageRef = React.useRef<HTMLHeadingElement | null>(null);
+  const isGameOver = winner !== null;
+
+  React.useEffect(() => {
+    if (winnerMessage && winnerMessageRef.current) {
+      winnerMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [winnerMessage]);
 
   const isActive = (color: Color) => {
     if (winner === 'draw') return false;
@@ -40,15 +49,29 @@ const GameStats: React.FC<GameStatsProps> = ({ mode, currentPlayer, stats, winne
       aria-label="Game status"
       className="w-full flex flex-col gap-5 px-3 justify-center items-center select-none"
     >
-      <div className="flex flex-col items-center">
-        <h2 className={cn('text-slate-200 text-sm opacity-50', { 'text-xs': !!winner })}>
-          {formatModeLabel(mode)}
-        </h2>
-        {winnerMessage ? (
-          <h2 className="font-semibold text-green-400 text-lg" role="status" aria-live="polite">
-            {winnerMessage}
+      <div className="flex w-full flex-wrap items-center justify-between gap-4 border-b border-slate-700 pb-4 mb-4">
+        <div className="flex flex-col items-start">
+          <h2 className={cn('text-slate-200 text-sm opacity-50', { 'text-xs': !!winner })}>
+            {formatModeLabel(mode)}
           </h2>
-        ) : null}
+          {winnerMessage ? (
+            <h2
+              ref={winnerMessageRef}
+              className="font-semibold text-green-400 text-lg"
+              role="status"
+              aria-live="polite"
+            >
+              {winnerMessage}
+            </h2>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          className="px-3 py-2 rounded-xl border border-slate-600 text-slate-300 bg-transparent text-sm font-semibold transition-colors duration-300 hover:bg-slate-200 hover:text-slate-900 hover:cursor-pointer flex-shrink-0"
+          onClick={onRestart}
+        >
+          {isGameOver ? 'New Game' : 'Restart'}
+        </button>
       </div>
       <div className="flex gap-3 w-full" role="list" aria-label="Player statistics">
         <StatCard

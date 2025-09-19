@@ -102,6 +102,7 @@ export const App: React.FC = () => {
         currentPlayer={state.currentPlayer}
         stats={state.stats}
         winner={state.winner}
+        onRestart={handleNewGame}
       />
       <BoardView
         board={state.board}
@@ -113,12 +114,6 @@ export const App: React.FC = () => {
         onPieceSelect={handlePieceSelect}
         winner={state.winner}
       />
-      <button
-        className="px-6 py-2 mt-4 rounded-2xl border-1 border-slate-400 text-slate-400 bg-transparent text-sm font-semibold  transition-colors duration-300 hover:bg-slate-200 hover:text-slate-900 hover:cursor-pointer"
-        onClick={handleNewGame}
-      >
-        {state.winner ? 'New Game' : 'Restart'}
-      </button>
     </Layout>
   );
 };
