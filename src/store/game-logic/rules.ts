@@ -32,8 +32,11 @@ const isStartingSquareFor = {
   dark: (square: Position) => isDarkSquare(square) && square.y > 4,
 } as const;
 
+const AI_PLAYER_COLOR = PieceColor.light;
+
 export {
   BOARD_SIZE,
+  AI_PLAYER_COLOR,
   kingMovementOffsets,
   forwardMovementOffsets,
   PieceColor,
