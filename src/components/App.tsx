@@ -1,7 +1,7 @@
 import React, { useReducer } from 'react';
-import { BoardView } from '../BoardView';
-import { GameModeSelection } from '../GameModeSelection';
-import { GameStats } from '../GameStats';
+import { BoardView } from './BoardView';
+import { GameModeSelection } from './GameModeSelection';
+import { GameStats } from './GameStats';
 import type { Position, GameMode, Piece } from '@/store/game-logic/types';
 import {
   selectAllMovesPerTurn,
@@ -10,7 +10,7 @@ import {
 } from '@/store/game-logic/engine';
 import { gameReducer, initialGameState } from '@/store/game-logic/reducer';
 import { useComputerTurn } from '@/hooks/useComputerTurn';
-import { Layout } from '../Layout';
+import { Layout } from './Layout';
 
 export const App: React.FC = () => {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
