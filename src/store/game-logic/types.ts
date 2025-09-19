@@ -47,6 +47,11 @@ interface PlayerStats {
   captures: number;
 }
 
+interface InteractiveState {
+  disabled: Set<string>;
+  selectable: Set<string>;
+}
+
 type Stats = Record<Color, PlayerStats>;
 
 type GameMode = 'PlayerVsPlayer' | 'PlayerVsComputer';
@@ -78,4 +83,5 @@ export type {
   Stats,
   Winner,
   GameMode,
+  InteractiveState,
 };

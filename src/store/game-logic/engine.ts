@@ -4,6 +4,7 @@ import type {
   Captures,
   Color,
   GameState,
+  InteractiveState,
   MoveSet,
   MoveTargetKeys,
   Piece,
@@ -113,9 +114,7 @@ const selectAllMovesPerTurn = (state: GameState): MoveSet => {
   return moves;
 };
 
-const selectInteractivityState = (
-  state: GameState,
-): { disabled: Set<string>; selectable: Set<string> } => {
+const selectInteractivityState = (state: GameState): InteractiveState => {
   const disabled = new Set<string>();
   const selectable = new Set<string>();
   const moves = selectAllMovesPerTurn(state);
@@ -142,7 +141,7 @@ const selectInteractivityState = (
     };
   }
 
-  // Otherwise, select all moves
+  // Otherwise, select all valid moves
   for (let row of board) {
     for (let piece of row) {
       if (!piece) continue;
