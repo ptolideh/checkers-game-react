@@ -1,4 +1,4 @@
-import { BOARD_SIZE, PieceColor } from './rules';
+import { BOARD_SIZE, PieceColor, isDarkSquare } from './rules';
 import type {
   Board,
   Captures,
@@ -20,7 +20,7 @@ const opponentOf = (player: Color) => {
 };
 
 const isValidLandingSpot = (board: Board, at: Position): boolean => {
-  return isMoveInBounds(board.length, at) && getPiece(board, at) === null;
+  return isMoveInBounds(board.length, at) && getPiece(board, at) === null && isDarkSquare(at);
 };
 
 const legalStepsPerPiece = (board: Board, piece: Piece): Steps => {
@@ -313,6 +313,8 @@ const evaluateWinner = (state: GameState): Winner => {
 };
 
 export {
+  opponentOf,
+  isValidLandingSpot,
   legalStepsPerPiece,
   legalCapturesPerPiece,
   selectAllMovesPerTurn,
