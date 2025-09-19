@@ -10,6 +10,7 @@ import type {
   Position,
   Stats,
   Steps,
+  Winner,
 } from './types';
 import { cloneBoard, equals, getOffsetsFor, getPiece, isMoveInBounds, positionKey } from './utils';
 
@@ -262,10 +263,61 @@ const incrementStatsFor = (
   };
 };
 
+const evaluateWinner = (state: GameState): Winner => {
+  const { board } = state;
+
+  const counts: Record<Color, number> = {
+    dark: 0,
+    light: 0,
+  };
+
+  for (let row of board) {
+    for (let piece of row) {
+      if (!piece) continue;
+      counts[piece.color] += 1;
+    }
+  }
+
+  const darkHasPieces = counts.dark > 0;
+  const lightHasPieces = counts.light > 0;
+
+  if (!darkHasPieces && !lightHasPieces) {
+    return 'draw';
+  }
+
+  if (!darkHasPieces) {
+    return PieceColor.light;
+  }
+
+  if (!lightHasPieces) {
+    return PieceColor.dark;
+  }
+
+  const darkMoves = selectAllMovesPerTurn({ ...state, currentPlayer: PieceColor.dark });
+  const lightMoves = selectAllMovesPerTurn({ ...state, currentPlayer: PieceColor.light });
+  const darkCanMove = darkMoves.captures.size > 0 || darkMoves.steps.size > 0;
+  const lightCanMove = lightMoves.captures.size > 0 || lightMoves.steps.size > 0;
+
+  if (!darkCanMove && !lightCanMove) {
+    return 'draw';
+  }
+
+  if (!darkCanMove) {
+    return PieceColor.light;
+  }
+
+  if (!lightCanMove) {
+    return PieceColor.dark;
+  }
+
+  return null;
+};
+
 export {
   legalStepsPerPiece,
   legalCapturesPerPiece,
   selectAllMovesPerTurn,
+  evaluateWinner,
   selectInteractivityState,
   selectMoveTargetsFor,
   isInMoveTargets,
