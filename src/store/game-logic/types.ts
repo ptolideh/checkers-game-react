@@ -37,6 +37,11 @@ interface MoveSet {
 
 type MoveTargetKeys = Set<string>;
 
+type AiMove = {
+  piece: Position;
+  target: Position;
+};
+
 interface PlayerStats {
   moves: number;
   captures: number;
@@ -44,11 +49,11 @@ interface PlayerStats {
 
 type Stats = Record<Color, PlayerStats>;
 
-type GameMode = 'pvp' | 'pvc';
+type GameMode = 'PlayerVsPlayer' | 'PlayerVsComputer';
 
 interface GameState {
   selectedPiece: Piece | null;
-  mode: 'pvp' | 'pvc' | null;
+  mode: GameMode | null;
   currentPlayer: Color;
   board: Board;
   winner: Winner;
@@ -67,6 +72,7 @@ export type {
   Captures,
   MoveSet,
   MoveTargetKeys,
+  AiMove,
   GameState,
   PlayerStats,
   Stats,

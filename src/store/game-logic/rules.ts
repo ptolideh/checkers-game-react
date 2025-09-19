@@ -1,4 +1,4 @@
-import type { Position, Color } from './types';
+import type { Position, Color, GameMode } from './types';
 
 const BOARD_SIZE = 8;
 
@@ -6,6 +6,11 @@ const PieceColor: Record<Color, Color> = {
   light: 'light',
   dark: 'dark',
 } as const;
+
+const GameModes: Record<GameMode, GameMode> = {
+  PlayerVsPlayer: 'PlayerVsPlayer',
+  PlayerVsComputer: 'PlayerVsComputer',
+};
 
 const kingMovementOffsets: ReadonlyArray<Position> = [
   { x: -1, y: +1 },
@@ -40,6 +45,7 @@ export {
   kingMovementOffsets,
   forwardMovementOffsets,
   PieceColor,
+  GameModes,
   isStartingSquareFor,
   isDarkSquare,
 };
