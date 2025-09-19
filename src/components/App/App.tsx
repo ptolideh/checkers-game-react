@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import React, { useReducer } from 'react';
 import { CheckersPiece } from '../CheckersPiece';
-import type { Color, Position, Board, Piece } from '@/store/game-logic/types';
+import type { Position, Board, GameState } from '@/store/game-logic/types';
 import { PieceColor } from '@/store/game-logic/rules';
 import { equals, getPiece, isDarkSquare, positionKey } from '@/store/game-logic/utils';
 import {
@@ -25,14 +25,6 @@ enum SquareColor {
 type Square = Position & {
   color: SquareColor;
 };
-
-interface State {
-  selectedPiece: Piece | null;
-  mode: 'pvp' | 'pvc' | null;
-  currentPlayer: Color;
-  board: Board;
-  squares: Square[][];
-}
 
 type Action =
   | { type: 'SELECT_PIECE'; payload: Position }
@@ -82,20 +74,20 @@ const getInitialBoardAndSquaresState = () => {
   return { board, squares };
 };
 
-const initialState: State = {
+const initialState: GameState = {
   selectedPiece: null,
   mode: null,
   currentPlayer: PieceColor.dark,
   ...getInitialBoardAndSquaresState(),
+  forcedCaptureKey: null,
 };
 
-function reducer(state: State, action: Action): State {
+function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case 'SELECT_PIECE': {
       const { x, y } = action.payload;
       const matchingPiece = getPiece(state.board, { x, y });
-      const moves = selectAllMovesPerTurn(state.board, state.currentPlayer);
-      const activePlayerPieces = selectInteractivityState(state.board, state.currentPlayer, moves);
+      const activePlayerPieces = selectInteractivityState(state);
       const pieceKey = positionKey.get({ x, y });
       if (matchingPiece && activePlayerPieces.selectable.has(pieceKey)) {
         return {
@@ -108,6 +100,12 @@ function reducer(state: State, action: Action): State {
     }
 
     case 'DESELECT_PIECE': {
+      if (state.forcedCaptureKey && state.selectedPiece) {
+        const selectedKey = positionKey.get(state.selectedPiece);
+        if (selectedKey === state.forcedCaptureKey) {
+          return state;
+        }
+      }
       if (state.selectedPiece && action.payload && equals(state.selectedPiece, action.payload)) {
         return {
           ...state,
@@ -119,7 +117,7 @@ function reducer(state: State, action: Action): State {
 
     case 'APPLY_MOVE': {
       if (!state.selectedPiece) return state;
-      const moves = selectAllMovesPerTurn(state.board, state.currentPlayer);
+      const moves = selectAllMovesPerTurn(state);
       const mustCapture = hasCaptures(moves);
       const moveTargetsForSelection = selectMoveTargetsFor(state.selectedPiece, moves);
       if (!isInMoveTargets(moveTargetsForSelection, action.payload)) return state;
@@ -127,25 +125,43 @@ function reducer(state: State, action: Action): State {
       if (mustCapture) {
         const res = applyCaptureMove(state.board, moves, state.selectedPiece, action.payload);
         if (!res) return state;
-        else {
+        const nextState = {
+          ...state,
+          board: res.newBoard,
+        };
+
+        // Check if the player has subsequent captures before updating board and switching players
+        const destinationKey = positionKey.get(res.destination);
+        const pieceAtDestination = getPiece(nextState.board, res.destination);
+        const subsequentCaptures = selectAllMovesPerTurn(nextState).captures.get(destinationKey);
+
+        // if the player has subsequent captures, keep the same player and lock the selection
+        if (subsequentCaptures && subsequentCaptures.length > 0 && pieceAtDestination) {
           return {
-            ...state,
-            board: res.newBoard,
+            ...nextState,
+            selectedPiece: { ...pieceAtDestination },
+            forcedCaptureKey: destinationKey,
+            currentPlayer: state.currentPlayer,
+          };
+        } else {
+          // otherwise, update the board as is and switch players
+          return {
+            ...nextState,
             selectedPiece: null,
+            forcedCaptureKey: null,
             currentPlayer: getNextPlayer(state.currentPlayer),
           };
         }
       } else {
         const res = applySimpleMove(state.board, moves, state.selectedPiece, action.payload);
         if (!res) return state;
-        else {
-          return {
-            ...state,
-            board: res.newBoard,
-            selectedPiece: null,
-            currentPlayer: getNextPlayer(state.currentPlayer),
-          };
-        }
+        return {
+          ...state,
+          board: res.newBoard,
+          selectedPiece: null,
+          forcedCaptureKey: null,
+          currentPlayer: getNextPlayer(state.currentPlayer),
+        };
       }
     }
 
@@ -153,6 +169,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         mode: action.payload,
+        forcedCaptureKey: null,
       };
     }
 
@@ -166,7 +183,7 @@ export const App: React.FC = () => {
   console.log(state);
 
   const movesPerTurn = React.useMemo(() => {
-    return selectAllMovesPerTurn(state.board, state.currentPlayer);
+    return selectAllMovesPerTurn(state);
   }, [state.board, state.currentPlayer]);
 
   const mustCapture = React.useMemo(() => {
@@ -174,8 +191,8 @@ export const App: React.FC = () => {
   }, [movesPerTurn]);
 
   const activePlayerPieces = React.useMemo(() => {
-    return selectInteractivityState(state.board, state.currentPlayer, movesPerTurn);
-  }, [movesPerTurn, state.board, state.currentPlayer]);
+    return selectInteractivityState(state);
+  }, [movesPerTurn, state.board, state.currentPlayer, state.forcedCaptureKey]);
 
   const moveTargetsForSelection = React.useMemo(() => {
     return state.selectedPiece ? selectMoveTargetsFor(state.selectedPiece, movesPerTurn) : null;
@@ -183,22 +200,22 @@ export const App: React.FC = () => {
 
   console.log({ mustCapture, moveTargetsForSelection, movesPerTurn });
 
-  const handleClickSquare = (coord: Position) => () => {
-    const targetKey = positionKey.get(coord);
-    if (state.selectedPiece && equals(state.selectedPiece, coord)) {
-      dispatch({ type: 'DESELECT_PIECE', payload: coord });
+  const handleClickSquare = (target: Position) => () => {
+    const targetKey = positionKey.get(target);
+    if (state.selectedPiece && equals(state.selectedPiece, target)) {
+      dispatch({ type: 'DESELECT_PIECE', payload: target });
       return;
     }
 
     if (activePlayerPieces.selectable.has(targetKey)) {
-      dispatch({ type: 'SELECT_PIECE', payload: coord });
+      dispatch({ type: 'SELECT_PIECE', payload: target });
       return;
     }
 
-    if (isInMoveTargets(moveTargetsForSelection, coord)) {
+    if (isInMoveTargets(moveTargetsForSelection, target)) {
       dispatch({
         type: 'APPLY_MOVE',
-        payload: coord,
+        payload: target,
       });
     }
   };

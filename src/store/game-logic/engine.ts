@@ -3,6 +3,7 @@ import type {
   Board,
   Captures,
   Color,
+  GameState,
   MoveSet,
   MoveTargetKeys,
   Piece,
@@ -90,6 +91,7 @@ const selectAllMovesPerTurn = (state: GameState): MoveSet => {
     steps: new Map<string, Steps>(),
     captures: new Map<string, Captures>(),
   };
+  const { board, currentPlayer } = state;
 
   for (let row of board) {
     for (let piece of row) {
@@ -101,7 +103,7 @@ const selectAllMovesPerTurn = (state: GameState): MoveSet => {
       if (validCaptures.length > 0) {
         moves.captures.set(positionKey.get({ x, y }), validCaptures);
       } else {
-        const validMoves = legalStepsPerPiece(board, piece);
+        const validMoves = legalStepsPerPiece(state.board, piece);
         if (validMoves.length > 0) moves.steps.set(positionKey.get({ x, y }), validMoves);
       }
     }
@@ -110,14 +112,35 @@ const selectAllMovesPerTurn = (state: GameState): MoveSet => {
 };
 
 const selectInteractivityState = (
-  board: Board,
-  currentPlayer: Color,
-  legalMoves: MoveSet,
+  state: GameState,
 ): { disabled: Set<string>; selectable: Set<string> } => {
   const disabled = new Set<string>();
   const selectable = new Set<string>();
-  const mustCapture = hasCaptures(legalMoves);
+  const moves = selectAllMovesPerTurn(state);
+  const mustCapture = hasCaptures(moves);
+  const { board, currentPlayer, forcedCaptureKey } = state;
 
+  // If forced capture (multi-hop capture), disable all other moves except forced capture piece
+  if (forcedCaptureKey && moves.captures.has(forcedCaptureKey)) {
+    for (let row of board) {
+      for (let piece of row) {
+        if (!piece) continue;
+        if (piece.color !== currentPlayer) continue;
+        const pieceKey = positionKey.get(piece);
+        if (pieceKey !== forcedCaptureKey) {
+          disabled.add(pieceKey);
+        }
+      }
+    }
+
+    selectable.add(forcedCaptureKey);
+    return {
+      disabled,
+      selectable,
+    };
+  }
+
+  // Otherwise, select all moves
   for (let row of board) {
     for (let piece of row) {
       if (!piece) continue;
@@ -125,9 +148,9 @@ const selectInteractivityState = (
       const coord = { x, y };
       if (piece.color === currentPlayer) {
         const pieceKey = positionKey.get(coord);
-        if (mustCapture && legalMoves.captures.has(pieceKey)) {
+        if (mustCapture && moves.captures.has(pieceKey)) {
           selectable.add(pieceKey);
-        } else if (!mustCapture && legalMoves.steps.has(pieceKey)) {
+        } else if (!mustCapture && moves.steps.has(pieceKey)) {
           selectable.add(pieceKey);
         } else {
           disabled.add(pieceKey);
