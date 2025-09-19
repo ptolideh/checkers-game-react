@@ -15,31 +15,10 @@ import {
   applyCaptureMove,
   incrementStatsFor,
   evaluateWinner,
-} from '@/game-logic/engine';
-import { BOARD_SIZE, PieceColor } from '@/game-logic/rules';
-import { positionKey } from '@/game-logic/utils';
-import type { Board, Captures, GameState, MoveSet, Piece, Steps } from '@/game-logic/types';
-
-const createEmptyBoard = (): Board =>
-  Array.from({ length: BOARD_SIZE }, () => Array.from({ length: BOARD_SIZE }, () => null));
-
-const createBaseState = (): GameState => ({
-  selectedPiece: null,
-  mode: null,
-  currentPlayer: PieceColor.light,
-  board: createEmptyBoard(),
-  winner: null,
-  forcedCaptureKey: null,
-  stats: {
-    light: { moves: 0, captures: 0 },
-    dark: { moves: 0, captures: 0 },
-  },
-});
-
-const createMoves = (): MoveSet => ({
-  steps: new Map<string, Steps>(),
-  captures: new Map<string, Captures>(),
-});
+} from '../engine';
+import { BOARD_SIZE, PieceColor } from '../rules';
+import { createBaseState, createEmptyBoard, createMoves, positionKey } from '../utils';
+import type { Piece } from '../types';
 
 describe('opponentOf', () => {
   it('returns dark for light pieces and light for dark pieces', () => {

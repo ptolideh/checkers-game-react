@@ -1,5 +1,5 @@
-import { forwardMovementOffsets, kingMovementOffsets, BOARD_SIZE } from './rules';
-import type { Board, Piece, Position } from './types';
+import { forwardMovementOffsets, kingMovementOffsets, BOARD_SIZE, PieceColor } from './rules';
+import type { Board, Captures, GameState, MoveSet, Piece, Position, Steps } from './types';
 
 const getPiece = (board: Board, at: Position): Piece | null => {
   return board[at.y][at.x];
@@ -34,4 +34,37 @@ const selectRandom = <T>(items: T[]): T | null => {
   return items[index] ?? null;
 };
 
-export { getPiece, getOffsetsFor, isMoveInBounds, equals, cloneBoard, selectRandom, positionKey };
+// ----------------- testing utils -----------------
+const createEmptyBoard = (): Board =>
+  Array.from({ length: BOARD_SIZE }, () => Array.from({ length: BOARD_SIZE }, () => null));
+
+const createBaseState = (): GameState => ({
+  selectedPiece: null,
+  mode: null,
+  currentPlayer: PieceColor.light,
+  board: createEmptyBoard(),
+  winner: null,
+  forcedCaptureKey: null,
+  stats: {
+    light: { moves: 0, captures: 0 },
+    dark: { moves: 0, captures: 0 },
+  },
+});
+
+const createMoves = (): MoveSet => ({
+  steps: new Map<string, Steps>(),
+  captures: new Map<string, Captures>(),
+});
+
+export {
+  getPiece,
+  getOffsetsFor,
+  isMoveInBounds,
+  equals,
+  cloneBoard,
+  selectRandom,
+  positionKey,
+  createEmptyBoard,
+  createBaseState,
+  createMoves,
+};

@@ -5,6 +5,7 @@ import { AI_PLAYER_COLOR, BOARD_SIZE, GameModes } from '@/game-logic/rules';
 import type { GameState, MoveSet, Position } from '@/game-logic/types';
 import { pickAiMove } from '@/game-logic/ai-player';
 import { selectAllMovesPerTurn } from '@/game-logic/engine';
+import { createBaseState, createEmptyBoard, createMoves } from '@/game-logic/utils';
 
 vi.mock('@/game-logic/ai-player', () => ({
   pickAiMove: vi.fn(),
@@ -17,27 +18,15 @@ vi.mock('@/game-logic/engine', () => ({
 const pickAiMoveMock = vi.mocked(pickAiMove);
 const selectAllMovesPerTurnMock = vi.mocked(selectAllMovesPerTurn);
 
-const createEmptyBoard = () =>
-  Array.from({ length: BOARD_SIZE }, () => Array.from({ length: BOARD_SIZE }, () => null));
-
-const createState = (overrides: Partial<GameState> = {}): GameState => ({
-  selectedPiece: null,
-  mode: GameModes.PlayerVsComputer,
-  currentPlayer: AI_PLAYER_COLOR,
-  board: createEmptyBoard(),
-  winner: null,
-  forcedCaptureKey: null,
-  stats: {
-    light: { moves: 0, captures: 0 },
-    dark: { moves: 0, captures: 0 },
-  },
-  ...overrides,
-});
-
-const createMoves = (): MoveSet => ({
-  steps: new Map(),
-  captures: new Map(),
-});
+const createState = (overrides: Partial<GameState> = {}): GameState => {
+  const baseState = createBaseState();
+  baseState.currentPlayer = AI_PLAYER_COLOR;
+  baseState.mode = GameModes.PlayerVsComputer;
+  return {
+    ...baseState,
+    ...overrides,
+  };
+};
 
 const TestComponent = ({
   state,
