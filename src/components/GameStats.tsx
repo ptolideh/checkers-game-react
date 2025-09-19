@@ -36,16 +36,21 @@ const GameStats: React.FC<GameStatsProps> = ({ mode, currentPlayer, stats, winne
   };
 
   return (
-    <div className="w-full flex flex-col gap-5 px-3 justify-center items-center select-none">
+    <section
+      aria-label="Game status"
+      className="w-full flex flex-col gap-5 px-3 justify-center items-center select-none"
+    >
       <div className="flex flex-col items-center">
         <h2 className={cn('text-slate-200 text-sm opacity-50', { 'text-xs': !!winner })}>
           {formatModeLabel(mode)}
         </h2>
         {winnerMessage ? (
-          <h2 className="font-semibold text-green-400 text-lg">{winnerMessage}</h2>
+          <h2 className="font-semibold text-green-400 text-lg" role="status" aria-live="polite">
+            {winnerMessage}
+          </h2>
         ) : null}
       </div>
-      <div className="flex gap-3 w-full">
+      <div className="flex gap-3 w-full" role="list" aria-label="Player statistics">
         <StatCard
           color={PieceColor.light}
           label={`${formatPlayerName(PieceColor.light)}`}
@@ -61,7 +66,7 @@ const GameStats: React.FC<GameStatsProps> = ({ mode, currentPlayer, stats, winne
           isActive={isActive(PieceColor.dark)}
         />
       </div>
-    </div>
+    </section>
   );
 };
 

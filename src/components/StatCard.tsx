@@ -27,6 +27,9 @@ const StatCard = React.memo(
             : 'opacity-40 saturate-75 brightness-95',
         )}
         data-active={isActive}
+        role="listitem"
+        aria-label={`${label} stats`}
+        aria-current={isActive ? 'true' : undefined}
       >
         <h2 className="text-md font-normal uppercase text-white/80 tracking-[0.25em]">{label}</h2>
         <dl className="mt-2 flex flex-col">
