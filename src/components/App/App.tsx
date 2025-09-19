@@ -3,7 +3,7 @@ import React, { useReducer } from 'react';
 import { CheckersPiece } from '../CheckersPiece';
 import type { Color, Position, Board, Piece } from '@/store/game-logic/types';
 import { PieceColor } from '@/store/game-logic/rules';
-import { equals, getPiece, positionKey } from '@/store/game-logic/utils';
+import { equals, getPiece, isDarkSquare, positionKey } from '@/store/game-logic/utils';
 import {
   applyCaptureMove,
   applySimpleMove,
@@ -58,7 +58,7 @@ const getInitialBoardAndSquaresState = () => {
       const square = squares[row][col];
       square.x = col;
       square.y = row;
-      if ((row + col) % 2 !== 0) {
+      if (isDarkSquare({ x: col, y: row })) {
         square.color = SquareColor.dark;
         if (row < 3) {
           board[row][col] = {
@@ -244,9 +244,7 @@ export const App: React.FC = () => {
                 key={columnIndex}
                 className={cn(
                   'border border-l-black border-r-black size-10 flex justify-center items-center',
-                  state.squares[rowIndex][columnIndex].color === SquareColor.dark
-                    ? 'bg-orange-900'
-                    : 'bg-orange-100',
+                  isDarkSquare({ x: columnIndex, y: rowIndex }) ? 'bg-orange-900' : 'bg-orange-100',
                   {
                     'bg-green-300': isInMoveTargets(moveTargetsForSelection, {
                       x: columnIndex,

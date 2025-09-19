@@ -5,8 +5,6 @@ const getPiece = (board: Board, at: Position): Piece | null => {
   return board[at.y][at.x];
 };
 
-const get = getPiece;
-
 const getOffsetsFor = (piece: Piece) => {
   return piece.isKing ? kingMovementOffsets : forwardMovementOffsets[piece.color];
 };
@@ -14,6 +12,8 @@ const getOffsetsFor = (piece: Piece) => {
 const isMoveInBounds = (boardSize: number, at: Position) => {
   return at.x >= 0 && at.x < boardSize && at.y >= 0 && at.y < boardSize;
 };
+
+const isDarkSquare = (at: Position) => (at.x + at.y) % 2 === 0;
 
 const equals = (a: Position, b: Position) => a.x === b.x && a.y === b.y;
 
@@ -30,4 +30,4 @@ const positionKey = {
   },
 } as const;
 
-export { getPiece, getOffsetsFor, isMoveInBounds, equals, cloneBoard, positionKey };
+export { getPiece, getOffsetsFor, isMoveInBounds, equals, cloneBoard, isDarkSquare, positionKey };
