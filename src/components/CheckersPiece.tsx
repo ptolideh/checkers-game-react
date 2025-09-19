@@ -2,7 +2,7 @@ import React from 'react';
 import type { Color, Position } from '@/store/game-logic/types';
 import { cn } from '@/lib/utils';
 
-interface CheckersPieceProps {
+export interface CheckersPieceProps {
   x: number;
   y: number;
   color: Color;
@@ -11,11 +11,23 @@ interface CheckersPieceProps {
   isDisabled?: boolean;
   isDimmed?: boolean;
   isInteractive?: boolean;
+  isDragging?: boolean;
   onSelect?: (position: Position) => void;
 }
 
 export const CheckersPiece = React.memo<CheckersPieceProps>(
-  ({ x, y, color, isKing, isSelected, isDisabled, isDimmed, isInteractive, onSelect }) => {
+  ({
+    x,
+    y,
+    color,
+    isKing,
+    isSelected,
+    isDisabled,
+    isDimmed,
+    isInteractive,
+    isDragging,
+    onSelect,
+  }) => {
     const position = { x, y };
     const handleClick = React.useCallback(
       (event: React.MouseEvent<HTMLDivElement>) => {
@@ -29,12 +41,13 @@ export const CheckersPiece = React.memo<CheckersPieceProps>(
     return (
       <div
         className={cn(
-          'rounded-full size-6 flex justify-center items-center opacity-100 ring-1 transition-[opacity,box-shadow] duration-400 ease-in-out ',
+          'rounded-full size-6 flex justify-center items-center opacity-100 ring-1 transition-[opacity,box-shadow] duration-400ms ease-in-out ',
           color === 'dark' ? 'bg-gray-900 ring-gray-950' : 'bg-red-700 ring-red-800',
           onSelect && !isDisabled ? 'cursor-pointer' : '',
-          isDimmed ? 'opacity-50' : '',
-          isInteractive ? (color === 'dark' ? 'ring-2 ring-gray-300' : 'ring-2 ring-red-200') : '',
-          isSelected ? 'ring-2 ring-green-400' : '',
+          isDimmed ? 'opacity-60' : '',
+          isInteractive ? (color === 'dark' ? 'ring-1 ring-gray-300' : 'ring-1 ring-red-200') : '',
+          isSelected ? 'ring-2 ring-green-300' : '',
+          isDragging === false ? '' : 'transform scale-130 drop-shadow-xl drop-shadow-black/70',
         )}
         onClick={handleClick}
       >

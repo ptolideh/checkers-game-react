@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import type { Position } from '@/store/game-logic/types';
 import { isDarkSquare } from '@/store/game-logic/rules';
@@ -9,25 +10,35 @@ export interface BoardSquareProps {
   isTarget: boolean;
   isDisabled: boolean;
   onSquareSelect: (position: Position) => void;
+  droppableId: string;
+  dropDisabled?: boolean;
   children?: React.ReactNode;
 }
 
 export const BoardSquare = React.memo<BoardSquareProps>(
-  ({ x, y, isTarget, isDisabled, onSquareSelect, children }) => {
+  ({ x, y, isTarget, isDisabled, onSquareSelect, droppableId, dropDisabled = false, children }) => {
     const position = { x, y };
 
     const handleClick = React.useCallback(() => {
       !isDisabled && onSquareSelect(position);
     }, [onSquareSelect, position, isDisabled]);
 
+    const { setNodeRef, isOver } = useDroppable({
+      id: droppableId,
+      disabled: dropDisabled,
+      data: { position },
+    });
+
     return (
       <div
         className={cn(
-          'border border-l-black border-r-black size-10 flex justify-center items-center transition-[background-color,box-shadow] duration-[250ms,200ms] ease-in-out',
+          'border border-l-gray-800 border-r-gray-800 size-10 flex justify-center items-center transition-[background-color,box-shadow] duration-[400ms,300ms] ease-in-out',
           isDarkSquare(position) ? 'bg-green-800' : 'bg-orange-100',
-          { 'bg-green-300 inset-ring-4 inset-ring-green-500': isTarget },
+          { 'bg-yellow-300 inset-ring-3 inset-ring-yellow-500': isTarget },
           { 'cursor-pointer': !isDisabled },
+          { 'inset-ring-10 duration-800': isOver && !dropDisabled },
         )}
+        ref={setNodeRef}
         onClick={handleClick}
       >
         {children}
