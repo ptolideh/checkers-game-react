@@ -15,6 +15,7 @@ import { equals, positionKey } from '@/game-logic/utils';
 import { BoardSquare } from './BoardSquare';
 import { CheckersPiece } from './CheckersPiece';
 import { DraggablePiece } from './DraggablePiece';
+import { BOARD_SIZE } from '@/game-logic/rules';
 
 interface BoardViewProps {
   board: Board;
@@ -112,9 +113,18 @@ const BoardView: React.FC<BoardViewProps> = ({
         className={cn('relative flex flex-col w-fit overflow-hidden', frameStyle, {
           'pointer-events-none opacity-80': !isGameInteractive,
         })}
+        role="grid"
+        aria-label="Checkers board"
+        aria-rowcount={BOARD_SIZE}
+        aria-colcount={BOARD_SIZE}
       >
         {board.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex border-t-gray-800 border-b-gray-800 items-center">
+          <div
+            key={rowIndex}
+            className="flex border-t-gray-800 border-b-gray-800 items-center"
+            role="row"
+            aria-rowindex={rowIndex + 1}
+          >
             {row.map((piece, columnIndex) => {
               const position = { x: columnIndex, y: rowIndex };
               const key = positionKey.get(position);
@@ -124,8 +134,7 @@ const BoardView: React.FC<BoardViewProps> = ({
               let pieceNode: React.ReactNode = null;
               if (piece) {
                 const pieceDisabled = isPieceDisabled(piece);
-                const pieceInteractive =
-                  isPlayerTurn && currPlayerPieces.selectable.has(key);
+                const pieceInteractive = isPlayerTurn && currPlayerPieces.selectable.has(key);
                 const pieceDimmed = currPlayerPieces.disabled.has(key);
                 const pieceSelected = !!selectedPiece && equals(piece, selectedPiece);
 

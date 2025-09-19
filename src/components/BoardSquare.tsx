@@ -45,6 +45,12 @@ const BoardSquare = React.memo<BoardSquareProps>(
         )}
         ref={setNodeRef}
         onClick={handleClick}
+        role="gridcell"
+        aria-label={`Square ${y + 1}, ${x + 1}`}
+        aria-disabled={isDisabled}
+        aria-selected={isTarget}
+        aria-rowindex={y + 1}
+        aria-colindex={x + 1}
       >
         {children}
       </div>
