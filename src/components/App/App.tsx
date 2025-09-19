@@ -19,6 +19,7 @@ import {
   selectInteractivityState,
   isInMoveTargets,
   incrementStatsFor,
+  evaluateWinner,
 } from '@/store/game-logic/engine';
 
 type Action =
@@ -26,8 +27,7 @@ type Action =
   | { type: 'DESELECT_PIECE'; payload: Position }
   | { type: 'APPLY_MOVE'; payload: Position }
   | { type: 'SET_MODE'; payload: GameMode }
-  | { type: 'RESET_GAME'; payload?: { mode?: GameMode } }
-  | { type: 'NEW_GAME'; payload?: { mode?: GameMode | null } };
+  | { type: 'NEW_GAME' };
 
 type InitialGameStateOverrides = Partial<Omit<GameState, 'board' | 'stats'>> & {
   board?: Board;
@@ -82,6 +82,10 @@ const createInitialGameState = (overrides: InitialGameStateOverrides = {}): Game
 const initialState: GameState = createInitialGameState();
 
 function reducer(state: GameState, action: Action): GameState {
+  if (state.winner && action.type !== 'NEW_GAME') {
+    return state;
+  }
+
   switch (action.type) {
     case 'SELECT_PIECE': {
       const { x, y } = action.payload;
@@ -124,48 +128,73 @@ function reducer(state: GameState, action: Action): GameState {
       if (mustCapture) {
         const res = applyCaptureMove(state.board, moves, state.selectedPiece, action.payload);
         if (!res) return state;
-        const nextState = {
+
+        let nextState = {
           ...state,
           board: res.newBoard,
         };
 
-        // Check if the player has subsequent captures before updating board and switching players
+        const winner = evaluateWinner(nextState);
+
+        if (winner) {
+          return {
+            ...nextState,
+            selectedPiece: null,
+            forcedCaptureKey: null,
+            currentPlayer: state.currentPlayer,
+            stats: incrementStatsFor(state.stats, state.currentPlayer, { moves: 1, captures: 1 }),
+            winner,
+          };
+        }
+
         const destinationKey = positionKey.get(res.destination);
-        const pieceAtDestination = getPiece(nextState.board, res.destination);
+        const pieceAtDestination = getPiece(res.newBoard, res.destination);
         const subsequentCaptures = selectAllMovesPerTurn(nextState).captures.get(destinationKey);
 
-        // if the player has subsequent captures, keep the same player and lock the selection
         if (subsequentCaptures && subsequentCaptures.length > 0 && pieceAtDestination) {
           return {
             ...nextState,
+            stats: incrementStatsFor(state.stats, state.currentPlayer, { captures: 1 }),
             selectedPiece: { ...pieceAtDestination },
             forcedCaptureKey: destinationKey,
             currentPlayer: state.currentPlayer,
-            stats: incrementStatsFor(state.stats, state.currentPlayer, { captures: 1 }),
           };
         } else {
-          // otherwise, update the board as is and switch players
           return {
             ...nextState,
             selectedPiece: null,
             forcedCaptureKey: null,
             currentPlayer: getNextPlayer(state.currentPlayer),
-            stats: incrementStatsFor(state.stats, state.currentPlayer, { moves: 1, captures: 1 }),
+            stats: incrementStatsFor(state.stats, state.currentPlayer, {
+              moves: 1,
+              captures: 1,
+            }),
           };
         }
-      } else {
-        const res = applySimpleMove(state.board, moves, state.selectedPiece, action.payload);
-        if (!res) return state;
-        const statsAfterMove = incrementStatsFor(state.stats, state.currentPlayer, { moves: 1 });
+      }
+
+      const res = applySimpleMove(state.board, moves, state.selectedPiece, action.payload);
+      if (!res) return state;
+      const nextState = {
+        ...state,
+        board: res.newBoard,
+        selectedPiece: null,
+        forcedCaptureKey: null,
+        stats: incrementStatsFor(state.stats, state.currentPlayer, { moves: 1 }),
+      };
+
+      const winner = evaluateWinner(nextState);
+      if (winner) {
         return {
-          ...state,
-          board: res.newBoard,
-          selectedPiece: null,
-          forcedCaptureKey: null,
-          currentPlayer: getNextPlayer(state.currentPlayer),
-          stats: statsAfterMove,
+          ...nextState,
+          winner,
         };
       }
+
+      return {
+        ...nextState,
+        currentPlayer: getNextPlayer(state.currentPlayer),
+      };
     }
 
     case 'SET_MODE': {
@@ -176,9 +205,9 @@ function reducer(state: GameState, action: Action): GameState {
       };
     }
 
-    case 'RESET_GAME':
-    case 'NEW_GAME':
-      return state;
+    case 'NEW_GAME': {
+      return createInitialGameState({ mode: null });
+    }
 
     default:
       return state;
@@ -208,6 +237,7 @@ export const App: React.FC = () => {
   console.log({ mustCapture, moveTargetsForSelection, movesPerTurn });
 
   const handleClickSquare = (target: Position) => () => {
+    if (state.winner) return;
     const targetKey = positionKey.get(target);
     if (state.selectedPiece && equals(state.selectedPiece, target)) {
       dispatch({ type: 'DESELECT_PIECE', payload: target });
