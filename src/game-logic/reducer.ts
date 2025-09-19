@@ -13,13 +13,8 @@ import {
   incrementStatsFor,
   evaluateWinner,
 } from './engine';
-
-type GameAction =
-  | { type: 'SELECT_PIECE'; payload: Position }
-  | { type: 'DESELECT_PIECE'; payload: Position }
-  | { type: 'APPLY_MOVE'; payload: Position }
-  | { type: 'SET_MODE'; payload: GameMode }
-  | { type: 'NEW_GAME' };
+import type { GameAction } from './state.actions';
+import { GameActionType } from './state.actions';
 
 const createInitialGameState = (overrides: Partial<GameState> = {}): GameState => {
   const board: Board = Array.from({ length: BOARD_SIZE }, () =>
@@ -69,12 +64,12 @@ const createInitialGameState = (overrides: Partial<GameState> = {}): GameState =
 const initialGameState: GameState = createInitialGameState();
 
 function gameReducer(state: GameState, action: GameAction): GameState {
-  if (state.winner && action.type !== 'NEW_GAME') {
+  if (state.winner && action.type !== GameActionType.NEW_GAME) {
     return state;
   }
 
   switch (action.type) {
-    case 'SELECT_PIECE': {
+    case GameActionType.SELECT_PIECE: {
       const { x, y } = action.payload;
       const matchingPiece = getPiece(state.board, { x, y });
       const activePlayerPieces = selectInteractivityState(state);
@@ -89,7 +84,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       }
     }
 
-    case 'DESELECT_PIECE': {
+    case GameActionType.DESELECT_PIECE: {
       if (state.forcedCaptureKey && state.selectedPiece) {
         const selectedKey = positionKey.get(state.selectedPiece);
         if (selectedKey === state.forcedCaptureKey) {
@@ -105,7 +100,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return state;
     }
 
-    case 'APPLY_MOVE': {
+    case GameActionType.APPLY_MOVE: {
       if (!state.selectedPiece) return state;
       const moves = selectAllMovesPerTurn(state);
       const mustCapture = hasCaptures(moves);
@@ -184,7 +179,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
-    case 'SET_MODE': {
+    case GameActionType.SET_MODE: {
       return {
         ...state,
         mode: action.payload,
@@ -192,7 +187,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
-    case 'NEW_GAME': {
+    case GameActionType.NEW_GAME: {
       return createInitialGameState({ mode: null });
     }
 

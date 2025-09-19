@@ -9,6 +9,7 @@ import {
   selectInteractivityState,
 } from '@/game-logic/engine';
 import { gameReducer, initialGameState } from '@/game-logic/reducer';
+import { GameActions } from '@/game-logic/state.actions';
 import { useComputerTurn } from '@/hooks/useComputerTurn';
 import { Layout } from './Layout';
 
@@ -37,14 +38,14 @@ export const App: React.FC = () => {
 
   const selectPiece = React.useCallback(
     (position: Position) => {
-      dispatch({ type: 'SELECT_PIECE', payload: position });
+      dispatch(GameActions.selectPiece(position));
     },
     [dispatch],
   );
 
   const applyMove = React.useCallback(
     (position: Position) => {
-      dispatch({ type: 'APPLY_MOVE', payload: position });
+      dispatch(GameActions.applyMove(position));
     },
     [dispatch],
   );
@@ -57,30 +58,27 @@ export const App: React.FC = () => {
 
   const handlePieceSelect = React.useCallback(
     (position: Position) => {
-      dispatch({ type: 'SELECT_PIECE', payload: position });
+      dispatch(GameActions.selectPiece(position));
     },
     [dispatch],
   );
 
   const handleSquareSelect = React.useCallback(
     (target: Position) => {
-      dispatch({
-        type: 'APPLY_MOVE',
-        payload: target,
-      });
+      dispatch(GameActions.applyMove(target));
     },
     [dispatch],
   );
 
   const handleModeSelect = React.useCallback(
     (mode: GameMode) => {
-      dispatch({ type: 'SET_MODE', payload: mode });
+      dispatch(GameActions.setMode(mode));
     },
     [dispatch],
   );
 
   const handleNewGame = React.useCallback(() => {
-    dispatch({ type: 'NEW_GAME' });
+    dispatch(GameActions.newGame());
   }, [dispatch]);
 
   // Game Mode Selection Screen
