@@ -5,6 +5,8 @@ approach. It plays on both desktop and mobile devices. It supports two players o
 against a simple computer opponent. The game keeps track of move history and game stats for each
 player and incorporates that design into the visual feedback players see when their turn ends.
 
+### 🌐 DEMO: https://checkers-game-react-pooyat.netlify.app/
+
 ## Getting Started
 
 Install dependencies:
