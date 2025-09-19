@@ -1,13 +1,7 @@
-import { cn } from '@/lib/utils';
 import React, { useReducer } from 'react';
-import { CheckersPiece } from '../CheckersPiece';
-import type { Position, Board, GameState, Stats, GameMode } from '@/store/game-logic/types';
-import {
-  BOARD_SIZE,
-  isStartingSquareFor,
-  PieceColor,
-  isDarkSquare,
-} from '@/store/game-logic/rules';
+import { BoardView } from '../BoardView';
+import type { Position, Board, GameState, Stats, GameMode, Piece } from '@/store/game-logic/types';
+import { BOARD_SIZE, isStartingSquareFor, PieceColor, GameModes } from '@/store/game-logic/rules';
 import { equals, getPiece, positionKey } from '@/store/game-logic/utils';
 import {
   applyCaptureMove,
@@ -21,6 +15,7 @@ import {
   incrementStatsFor,
   evaluateWinner,
 } from '@/store/game-logic/engine';
+import { useComputerTurn } from '@/hooks/useComputerTurn';
 
 type Action =
   | { type: 'SELECT_PIECE'; payload: Position }
@@ -216,46 +211,56 @@ function reducer(state: GameState, action: Action): GameState {
 
 export const App: React.FC = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
-  console.log(state);
-
   const movesPerTurn = React.useMemo(() => {
     return selectAllMovesPerTurn(state);
-  }, [state.board, state.currentPlayer]);
+  }, [state.board, state.currentPlayer, state.forcedCaptureKey]);
 
-  const mustCapture = React.useMemo(() => {
-    return hasCaptures(movesPerTurn);
-  }, [movesPerTurn]);
-
-  const activePlayerPieces = React.useMemo(() => {
+  const currPlayerPieces = React.useMemo(() => {
     return selectInteractivityState(state);
-  }, [movesPerTurn, state.board, state.currentPlayer, state.forcedCaptureKey]);
+  }, [state.board, state.currentPlayer, state.forcedCaptureKey]);
+
+  const selectTargetsForPiece = React.useCallback(
+    (piece: Piece | null) => {
+      if (!piece) return null;
+      return selectMoveTargetsFor(piece, movesPerTurn);
+    },
+    [movesPerTurn],
+  );
 
   const moveTargetsForSelection = React.useMemo(() => {
-    return state.selectedPiece ? selectMoveTargetsFor(state.selectedPiece, movesPerTurn) : null;
-  }, [state.selectedPiece, movesPerTurn]);
+    return selectTargetsForPiece(state.selectedPiece);
+  }, [selectTargetsForPiece, state.selectedPiece]);
 
-  console.log({ mustCapture, moveTargetsForSelection, movesPerTurn });
+  const selectPiece = React.useCallback(
+    (position: Position) => {
+      dispatch({ type: 'SELECT_PIECE', payload: position });
+    },
+    [dispatch],
+  );
 
-  const handleClickSquare = (target: Position) => () => {
-    if (state.winner) return;
-    const targetKey = positionKey.get(target);
-    if (state.selectedPiece && equals(state.selectedPiece, target)) {
-      dispatch({ type: 'DESELECT_PIECE', payload: target });
-      return;
-    }
+  const applyMove = React.useCallback((position: Position) => {
+    dispatch({ type: 'APPLY_MOVE', payload: position });
+  }, []);
 
-    if (activePlayerPieces.selectable.has(targetKey)) {
-      dispatch({ type: 'SELECT_PIECE', payload: target });
-      return;
-    }
+  useComputerTurn({
+    state,
+    onSelectPiece: selectPiece,
+    onApplyMove: applyMove,
+  });
 
-    if (isInMoveTargets(moveTargetsForSelection, target)) {
+  const handlePieceSelect = React.useCallback((position: Position) => {
+    dispatch({ type: 'SELECT_PIECE', payload: position });
+  }, []);
+
+  const handleSquareSelect = React.useCallback(
+    (target: Position) => {
       dispatch({
         type: 'APPLY_MOVE',
         payload: target,
       });
-    }
-  };
+    },
+    [dispatch],
+  );
 
   // Game mode selection
   if (!state.mode) {
@@ -266,13 +271,13 @@ export const App: React.FC = () => {
         <div className="flex gap-2">
           <button
             className="px-3 py-1 rounded border border-black hover:bg-gray-100"
-            onClick={() => dispatch({ type: 'SET_MODE', payload: 'pvp' })}
+            onClick={() => dispatch({ type: 'SET_MODE', payload: GameModes.PlayerVsPlayer })}
           >
             Two Players (PvP)
           </button>
           <button
             className="px-3 py-1 rounded border border-black hover:bg-gray-100"
-            onClick={() => dispatch({ type: 'SET_MODE', payload: 'pvc' })}
+            onClick={() => dispatch({ type: 'SET_MODE', payload: GameModes.PlayerVsComputer })}
           >
             Single Player (PvC)
           </button>
@@ -286,7 +291,10 @@ export const App: React.FC = () => {
       <h1 className="text-xl font-semibold mb-2">Checkers Game</h1>
       <div className="flex items-center gap-4 text-sm mb-4">
         <span className="mr-3">
-          Mode: {state.mode === 'pvp' ? 'Two Players (PvP)' : 'Single Player (PvC)'}
+          Mode:{' '}
+          {state.mode === GameModes.PlayerVsPlayer
+            ? 'Multiplayer (Player vs Player)'
+            : 'Single Player (Player vs Computer)'}
         </span>
         <span className="mr-3">
           Current: {state.currentPlayer === PieceColor.light ? 'Red' : 'Black'}
@@ -311,47 +319,15 @@ export const App: React.FC = () => {
             : `${state.winner === PieceColor.light ? 'Red' : 'Black'} wins the game!`}
         </div>
       )}
-      <div
-        className={cn('flex flex-col border border-black w-fit', {
-          'pointer-events-none opacity-80': !!state.winner,
-        })}
-      >
-        {state.board?.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex border-t-black border-b-black items-center">
-            {row.map((piece, columnIndex) => (
-              <div
-                key={columnIndex}
-                className={cn(
-                  'border border-l-black border-r-black size-10 flex justify-center items-center',
-                  isDarkSquare({ x: columnIndex, y: rowIndex }) ? 'bg-orange-900' : 'bg-orange-100',
-                  {
-                    'bg-green-300': isInMoveTargets(moveTargetsForSelection, {
-                      x: columnIndex,
-                      y: rowIndex,
-                    }),
-                  },
-                  {
-                    'opacity-50': activePlayerPieces.disabled.has(
-                      positionKey.get({ x: columnIndex, y: rowIndex }),
-                    ),
-                  },
-                )}
-                onClick={handleClickSquare({ x: columnIndex, y: rowIndex })}
-              >
-                {piece ? (
-                  <CheckersPiece
-                    color={piece.color}
-                    king={piece.isKing}
-                    isSelected={!!state.selectedPiece && equals(piece, state.selectedPiece)}
-                  />
-                ) : (
-                  ''
-                )}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+      <BoardView
+        board={state.board}
+        selectedPiece={state.selectedPiece}
+        moveTargets={moveTargetsForSelection}
+        currPlayerPieces={currPlayerPieces}
+        onSquareSelect={handleSquareSelect}
+        onPieceSelect={handlePieceSelect}
+        winner={state.winner}
+      />
     </div>
   );
 };
