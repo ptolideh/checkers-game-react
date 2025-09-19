@@ -15,13 +15,11 @@ export interface BoardSquareProps {
   children?: React.ReactNode;
 }
 
+// Renders each square on the board
+// Handles movement target selection and drops
 export const BoardSquare = React.memo<BoardSquareProps>(
   ({ x, y, isTarget, isDisabled, onSquareSelect, droppableId, dropDisabled = false, children }) => {
     const position = { x, y };
-
-    const handleClick = React.useCallback(() => {
-      !isDisabled && onSquareSelect(position);
-    }, [onSquareSelect, position, isDisabled]);
 
     const { setNodeRef, isOver } = useDroppable({
       id: droppableId,
@@ -29,15 +27,21 @@ export const BoardSquare = React.memo<BoardSquareProps>(
       data: { position },
     });
 
+    const handleClick = React.useCallback(() => {
+      !isDisabled && onSquareSelect(position);
+    }, [onSquareSelect, position, isDisabled]);
+
     return (
       <div
         className={cn(
           'border border-l-gray-800 border-r-gray-800  flex justify-center items-center transition-[background-color,box-shadow] duration-[400ms,300ms] ease-in-out',
           'size-10 sm:size-13',
           isDarkSquare(position) ? 'bg-green-800' : 'bg-orange-100',
-          { 'bg-yellow-300 inset-ring-4 inset-ring-yellow-500': isTarget },
-          { 'cursor-pointer': !isDisabled },
-          { 'inset-ring-10 duration-500': isOver && !dropDisabled },
+          {
+            'bg-yellow-300 inset-ring-4 inset-ring-yellow-500': isTarget,
+            'cursor-pointer': !isDisabled,
+            'inset-ring-10 duration-500': isOver && !dropDisabled,
+          },
         )}
         ref={setNodeRef}
         onClick={handleClick}

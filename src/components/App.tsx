@@ -83,7 +83,7 @@ export const App: React.FC = () => {
     dispatch({ type: 'NEW_GAME' });
   }, [dispatch]);
 
-  // Game mode selection
+  // Game Mode Selection Screen
   if (!state.mode) {
     return (
       <Layout>
@@ -92,6 +92,7 @@ export const App: React.FC = () => {
     );
   }
 
+  // Game Play Screen
   return (
     <Layout>
       <GameStats
