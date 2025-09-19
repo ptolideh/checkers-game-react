@@ -44,6 +44,8 @@ interface PlayerStats {
 
 type Stats = Record<Color, PlayerStats>;
 
+type GameMode = 'pvp' | 'pvc';
+
 interface GameState {
   selectedPiece: Piece | null;
   mode: 'pvp' | 'pvc' | null;
@@ -69,4 +71,5 @@ export type {
   PlayerStats,
   Stats,
   Winner,
+  GameMode,
 };

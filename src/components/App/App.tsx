@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import React, { useReducer } from 'react';
 import { CheckersPiece } from '../CheckersPiece';
-import type { Position, Board, GameState, Stats } from '@/store/game-logic/types';
+import type { Position, Board, GameState, Stats, GameMode } from '@/store/game-logic/types';
 import {
   BOARD_SIZE,
   isStartingSquareFor,
@@ -25,9 +25,16 @@ type Action =
   | { type: 'SELECT_PIECE'; payload: Position }
   | { type: 'DESELECT_PIECE'; payload: Position }
   | { type: 'APPLY_MOVE'; payload: Position }
-  | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' };
+  | { type: 'SET_MODE'; payload: GameMode }
+  | { type: 'RESET_GAME'; payload?: { mode?: GameMode } }
+  | { type: 'NEW_GAME'; payload?: { mode?: GameMode | null } };
 
-const createInitialGameState = (overrides: Partial<GameState> = {}): GameState => {
+type InitialGameStateOverrides = Partial<Omit<GameState, 'board' | 'stats'>> & {
+  board?: Board;
+  stats?: Stats;
+};
+
+const createInitialGameState = (overrides: InitialGameStateOverrides = {}): GameState => {
   const board: Board = Array.from({ length: BOARD_SIZE }, () =>
     Array.from({ length: BOARD_SIZE }, () => null),
   );
@@ -67,8 +74,8 @@ const createInitialGameState = (overrides: Partial<GameState> = {}): GameState =
     winner: null,
     forcedCaptureKey: null,
     ...overrides,
-    board: overrides?.board ?? board,
-    stats: overrides?.stats ?? defaultStats,
+    board: overrides.board ?? board,
+    stats: overrides.stats ?? defaultStats,
   };
 };
 
@@ -168,6 +175,10 @@ function reducer(state: GameState, action: Action): GameState {
         forcedCaptureKey: null,
       };
     }
+
+    case 'RESET_GAME':
+    case 'NEW_GAME':
+      return state;
 
     default:
       return state;
