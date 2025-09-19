@@ -2,8 +2,13 @@ import { cn } from '@/lib/utils';
 import React, { useReducer } from 'react';
 import { CheckersPiece } from '../CheckersPiece';
 import type { Position, Board, GameState, Stats } from '@/store/game-logic/types';
-import { PieceColor } from '@/store/game-logic/rules';
-import { equals, getPiece, isDarkSquare, positionKey } from '@/store/game-logic/utils';
+import {
+  BOARD_SIZE,
+  isStartingSquareFor,
+  PieceColor,
+  isDarkSquare,
+} from '@/store/game-logic/rules';
+import { equals, getPiece, positionKey } from '@/store/game-logic/utils';
 import {
   applyCaptureMove,
   applySimpleMove,
@@ -16,77 +21,58 @@ import {
   incrementStatsFor,
 } from '@/store/game-logic/engine';
 
-const BOARD_SIZE = 8;
-
-enum SquareColor {
-  dark = 'darkPiece',
-  light = 'lightPiece',
-}
-
-type Square = Position & {
-  color: SquareColor;
-};
-
 type Action =
   | { type: 'SELECT_PIECE'; payload: Position }
   | { type: 'DESELECT_PIECE'; payload: Position }
   | { type: 'APPLY_MOVE'; payload: Position }
   | { type: 'SET_MODE'; payload: 'pvp' | 'pvc' };
 
-const getInitialBoardAndSquaresState = () => {
-  const squares: Square[][] = Array.from({ length: BOARD_SIZE }, () =>
-    Array.from({ length: BOARD_SIZE }, () => ({
-      x: 0,
-      y: 0,
-      color: SquareColor.light,
-    })),
-  );
-
-  const board: Board = Array.from({ length: squares.length }, () =>
-    Array.from({ length: squares.length }, () => null),
+const createInitialGameState = (overrides: Partial<GameState> = {}): GameState => {
+  const board: Board = Array.from({ length: BOARD_SIZE }, () =>
+    Array.from({ length: BOARD_SIZE }, () => null),
   );
 
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE; col++) {
-      const square = squares[row][col];
-      square.x = col;
-      square.y = row;
-      if (isDarkSquare({ x: col, y: row })) {
-        square.color = SquareColor.dark;
-        if (row < 3) {
-          board[row][col] = {
-            x: col,
-            y: row,
-            color: PieceColor.light,
-            isKing: false,
-          };
-        }
-        if (row > 4) {
-          board[row][col] = {
-            x: col,
-            y: row,
-            color: PieceColor.dark,
-            isKing: false,
-          };
-        }
+      const square = { x: col, y: row };
+      if (isStartingSquareFor.dark(square)) {
+        board[row][col] = {
+          x: col,
+          y: row,
+          color: PieceColor.dark,
+          isKing: false,
+        };
+      }
+
+      if (isStartingSquareFor.light(square)) {
+        board[row][col] = {
+          x: col,
+          y: row,
+          color: PieceColor.light,
+          isKing: false,
+        };
       }
     }
   }
-  return { board, squares };
-};
 
-const initialState: GameState = {
-  ...getInitialBoardAndSquaresState(),
-  selectedPiece: null,
-  mode: null,
-  currentPlayer: PieceColor.dark,
-  winner: null,
-  forcedCaptureKey: null,
-  stats: {
+  const defaultStats = {
     [PieceColor.dark]: { moves: 0, captures: 0 },
     [PieceColor.light]: { moves: 0, captures: 0 },
-  } as Stats,
+  } as Stats;
+
+  return {
+    selectedPiece: null,
+    mode: null,
+    currentPlayer: PieceColor.dark,
+    winner: null,
+    forcedCaptureKey: null,
+    ...overrides,
+    board: overrides?.board ?? board,
+    stats: overrides?.stats ?? defaultStats,
+  };
 };
+
+const initialState: GameState = createInitialGameState();
 
 function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {

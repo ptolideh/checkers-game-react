@@ -25,4 +25,18 @@ const forwardMovementOffsets: Record<Color, ReadonlyArray<Position>> = {
   ],
 };
 
-export { BOARD_SIZE, kingMovementOffsets, forwardMovementOffsets, PieceColor };
+const isDarkSquare = (at: Position) => (at.x + at.y) % 2 === 0;
+
+const isStartingSquareFor = {
+  light: (square: Position) => isDarkSquare(square) && square.y < 3,
+  dark: (square: Position) => isDarkSquare(square) && square.y > 4,
+} as const;
+
+export {
+  BOARD_SIZE,
+  kingMovementOffsets,
+  forwardMovementOffsets,
+  PieceColor,
+  isStartingSquareFor,
+  isDarkSquare,
+};

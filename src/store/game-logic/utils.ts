@@ -13,8 +13,6 @@ const isMoveInBounds = (boardSize: number, at: Position) => {
   return at.x >= 0 && at.x < boardSize && at.y >= 0 && at.y < boardSize;
 };
 
-const isDarkSquare = (at: Position) => (at.x + at.y) % 2 === 0;
-
 const equals = (a: Position, b: Position) => a.x === b.x && a.y === b.y;
 
 const cloneBoard = (board: Board): Board => {
@@ -30,4 +28,4 @@ const positionKey = {
   },
 } as const;
 
-export { getPiece, getOffsetsFor, isMoveInBounds, equals, cloneBoard, isDarkSquare, positionKey };
+export { getPiece, getOffsetsFor, isMoveInBounds, equals, cloneBoard, positionKey };
