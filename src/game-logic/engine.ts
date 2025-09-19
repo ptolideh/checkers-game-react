@@ -23,6 +23,8 @@ const isValidLandingSpot = (board: Board, at: Position): boolean => {
   return isMoveInBounds(board.length, at) && getPiece(board, at) === null && isDarkSquare(at);
 };
 
+// Steps are moves that don't capture. Think of it as sliding to the nearby empty square
+// returns a list of valid steps adjacent to a given piece
 const legalStepsPerPiece = (board: Board, piece: Piece): Steps => {
   if (!piece) return [];
 
@@ -51,6 +53,12 @@ const legalStepsPerPiece = (board: Board, piece: Piece): Steps => {
   return steps;
 };
 
+// Captures are moves that require the piece jump over and capture an opponent's piece
+// returns a list of valid captures adjacent to a given piece
+// each capture has a from, over, and to.
+// the from is the piece that is the current piece.
+// the over is the piece that is jumped over and captures
+// the to is the position that we're landing on next
 const legalCapturesPerPiece = (board: Board, piece: Piece): Captures => {
   if (!piece) return [];
 
@@ -89,6 +97,8 @@ const legalCapturesPerPiece = (board: Board, piece: Piece): Captures => {
   return captures;
 };
 
+// The goal here is to collect all valid steps and captures for each piece that belongs to the current player
+// This reduces over-checking and also helps us provide better UX
 const selectAllMovesPerTurn = (state: GameState): MoveSet => {
   const moves = {
     steps: new Map<string, Steps>(),
@@ -102,6 +112,7 @@ const selectAllMovesPerTurn = (state: GameState): MoveSet => {
       if (piece.color !== currentPlayer) continue;
       const { x, y } = piece;
 
+      // captures take priority. if there are no captures, then we check for steps
       const validCaptures = legalCapturesPerPiece(board, piece);
       if (validCaptures.length > 0) {
         moves.captures.set(positionKey.get({ x, y }), validCaptures);
@@ -114,6 +125,9 @@ const selectAllMovesPerTurn = (state: GameState): MoveSet => {
   return moves;
 };
 
+// Uses the result of selectAllMovesPerTurn to determine which pieces for the current player
+// can be interacted with and which need to be disabled or dimmed for better UX
+// Important to note that this returns a set of key strings instead of actual pieces for better look-up performance
 const selectInteractivityState = (state: GameState): InteractiveState => {
   const disabled = new Set<string>();
   const selectable = new Set<string>();
@@ -141,7 +155,7 @@ const selectInteractivityState = (state: GameState): InteractiveState => {
     };
   }
 
-  // Otherwise, select all valid moves
+  // Otherwise, select all valid moves (steps or captures)
   for (let row of board) {
     for (let piece of row) {
       if (!piece) continue;
@@ -166,16 +180,21 @@ const selectInteractivityState = (state: GameState): InteractiveState => {
   };
 };
 
+// Similar to selectInteractivityState, this returns a set of key strings
+// The goal here is to find the collection of squares where the current player can move to
+// Which speeds up look up and UI render
 const selectMoveTargetsFor = (selected: Piece, legalMoves: MoveSet): MoveTargetKeys => {
   const moveTargets = new Set<string>();
   const selectedKey = positionKey.get(selected);
   const mustCapture = hasCaptures(legalMoves);
 
+  // If must capture, only collect valid landing spots after the capture
   if (mustCapture) {
     for (let capture of legalMoves.captures.get(selectedKey) || []) {
       moveTargets.add(positionKey.get(capture.to));
     }
   } else {
+    // otherwise, get valid target spots for stepping
     for (let step of legalMoves.steps.get(selectedKey) || []) {
       moveTargets.add(positionKey.get(step.to));
     }
@@ -183,6 +202,7 @@ const selectMoveTargetsFor = (selected: Piece, legalMoves: MoveSet): MoveTargetK
   return moveTargets;
 };
 
+// Ties into selectMoveTargetsFor. Returns true if a square is within the evaluated target set
 const isInMoveTargets = (moveTargets: MoveTargetKeys | null, target: Position) => {
   return !!moveTargets && moveTargets.has(positionKey.get(target));
 };
@@ -195,6 +215,7 @@ const getNextPlayer = (currentPlayer: Color) => {
   return currentPlayer === PieceColor.light ? PieceColor.dark : PieceColor.light;
 };
 
+// Returns true if the piece should be promoted to king type
 const promoteToKing = (piece: Piece): boolean => {
   if (piece.isKing) return true;
   if (
@@ -206,6 +227,8 @@ const promoteToKing = (piece: Piece): boolean => {
   return false;
 };
 
+// Applies a valid step move to the board
+// It moves the piece to the target square, handle king status, and returns the new board if successful
 const applySimpleMove = (board: Board, moves: MoveSet, selectedPiece: Piece, target: Position) => {
   const selectedKey = positionKey.get({ x: selectedPiece.x, y: selectedPiece.y });
   const step = moves.steps.get(selectedKey)?.find((step) => equals(step.to, target));
@@ -226,6 +249,8 @@ const applySimpleMove = (board: Board, moves: MoveSet, selectedPiece: Piece, tar
   return { newBoard, destination: step.to };
 };
 
+// Applies a valid capture move to the board
+// It moves the piece to the target square, removes the captured piece, handle king status, and returns the new board if successful
 const applyCaptureMove = (board: Board, moves: MoveSet, selectedPiece: Piece, target: Position) => {
   const selectedKey = positionKey.get({ x: selectedPiece.x, y: selectedPiece.y });
   const capture = moves.captures.get(selectedKey)?.find((capture) => equals(capture.to, target));
@@ -247,6 +272,7 @@ const applyCaptureMove = (board: Board, moves: MoveSet, selectedPiece: Piece, ta
   return { newBoard, captured: capture.over, destination: capture.to };
 };
 
+// updates player stats based on a given delta
 const incrementStatsFor = (
   stats: Stats,
   color: Color,
@@ -324,6 +350,7 @@ export {
   isInMoveTargets,
   hasCaptures,
   getNextPlayer,
+  promoteToKing,
   applySimpleMove,
   applyCaptureMove,
   incrementStatsFor,
