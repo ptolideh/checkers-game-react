@@ -85,45 +85,7 @@ const legalCapturesPerPiece = (board: Board, piece: Piece): Captures => {
   return captures;
 };
 
-const mapAllMovesForActivePlayer = (board: Board, currentPlayer: Color): Board => {
-  return board.map((row) => {
-    return row.map((piece) => {
-      if (!piece || piece.color !== currentPlayer) {
-        return piece
-          ? {
-              ...piece,
-              moves: {
-                steps: [],
-                captures: [],
-              },
-            }
-          : null;
-      }
-
-      const validCaptures = legalCapturesPerPiece(board, piece);
-      if (validCaptures.length > 0) {
-        return {
-          ...piece,
-          moves: {
-            steps: [],
-            captures: validCaptures,
-          },
-        };
-      } else {
-        const validMoves = legalStepsPerPiece(board, piece);
-        return {
-          ...piece,
-          moves: {
-            steps: validMoves,
-            captures: [],
-          },
-        };
-      }
-    });
-  });
-};
-
-const selectAllMovesPerTurn = (board: Board, currentPlayer: Color): MoveSet => {
+const selectAllMovesPerTurn = (state: GameState): MoveSet => {
   const moves = {
     steps: new Map<string, Steps>(),
     captures: new Map<string, Captures>(),
@@ -265,7 +227,6 @@ export {
   legalStepsPerPiece,
   legalCapturesPerPiece,
   selectAllMovesPerTurn,
-  mapAllMovesForActivePlayer,
   selectInteractivityState,
   selectMoveTargetsFor,
   isInMoveTargets,
