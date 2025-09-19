@@ -7,6 +7,8 @@ player and incorporates that design into the visual feedback players see when th
 
 ### 🌐 DEMO: https://checkers-game-react-pooyat.netlify.app/
 
+<img src="./assets/checkers-screen-2.png" alt="Checkers gameplay screenshot" width="520" />
+
 ## Getting Started
 
 Install dependencies:
