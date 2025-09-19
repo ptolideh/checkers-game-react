@@ -1,8 +1,8 @@
 import React from 'react';
 import type { HTMLAttributes } from 'react';
-import type { Color } from '@/store/game-logic/types';
+import type { Color } from '@/game-logic/types';
 import { cn } from '@/lib/utils';
-import { PieceColor } from '@/store/game-logic/rules';
+import { PieceColor } from '@/game-logic/rules';
 
 interface StatCardProps extends HTMLAttributes<HTMLDivElement> {
   color: Color;

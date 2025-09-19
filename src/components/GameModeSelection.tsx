@@ -1,6 +1,6 @@
 import React from 'react';
-import type { GameMode } from '@/store/game-logic/types';
-import { GameModes } from '@/store/game-logic/rules';
+import type { GameMode } from '@/game-logic/types';
+import { GameModes } from '@/game-logic/rules';
 
 interface GameModeButtonProps {
   icon: React.ReactNode;

@@ -1,8 +1,8 @@
 import React from 'react';
-import { pickAiMove } from '@/store/game-logic/ai-player';
-import { AI_PLAYER_COLOR, GameModes } from '@/store/game-logic/rules';
-import type { GameState, Position } from '@/store/game-logic/types';
-import { selectAllMovesPerTurn } from '@/store/game-logic/engine';
+import { pickAiMove } from '@/game-logic/ai-player';
+import { AI_PLAYER_COLOR, GameModes } from '@/game-logic/rules';
+import type { GameState, Position } from '@/game-logic/types';
+import { selectAllMovesPerTurn } from '@/game-logic/engine';
 
 interface UseComputerTurnArgs {
   state: GameState;

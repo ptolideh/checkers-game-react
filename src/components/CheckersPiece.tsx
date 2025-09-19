@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Color, Position } from '@/store/game-logic/types';
+import type { Color, Position } from '@/game-logic/types';
 import { cn } from '@/lib/utils';
 
 interface CheckersPieceProps {

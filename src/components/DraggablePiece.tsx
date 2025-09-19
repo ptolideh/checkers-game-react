@@ -1,8 +1,7 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import type { Piece, Position } from '@/store/game-logic/types';
-import { positionKey } from '@/store/game-logic/utils';
+import { positionKey } from '@/game-logic/utils';
 import { CheckersPiece, type CheckersPieceProps } from './CheckersPiece';
 
 interface DraggablePieceProps extends CheckersPieceProps {

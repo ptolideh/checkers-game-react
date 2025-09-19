@@ -2,13 +2,13 @@ import React, { useReducer } from 'react';
 import { BoardView } from './BoardView';
 import { GameModeSelection } from './GameModeSelection';
 import { GameStats } from './GameStats';
-import type { Position, GameMode, Piece } from '@/store/game-logic/types';
+import type { Position, GameMode, Piece } from '@/game-logic/types';
 import {
   selectAllMovesPerTurn,
   selectMoveTargetsFor,
   selectInteractivityState,
-} from '@/store/game-logic/engine';
-import { gameReducer, initialGameState } from '@/store/game-logic/reducer';
+} from '@/game-logic/engine';
+import { gameReducer, initialGameState } from '@/game-logic/reducer';
 import { useComputerTurn } from '@/hooks/useComputerTurn';
 import { Layout } from './Layout';
 

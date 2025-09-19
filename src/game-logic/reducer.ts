@@ -1,6 +1,6 @@
-import type { Position, Board, GameState, Stats, GameMode } from '@/store/game-logic/types';
-import { BOARD_SIZE, isStartingSquareFor, PieceColor } from '@/store/game-logic/rules';
-import { equals, getPiece, positionKey } from '@/store/game-logic/utils';
+import type { Position, Board, GameState, Stats, GameMode } from './types';
+import { BOARD_SIZE, isStartingSquareFor, PieceColor } from './rules';
+import { equals, getPiece, positionKey } from './utils';
 import {
   applyCaptureMove,
   applySimpleMove,
@@ -12,7 +12,7 @@ import {
   isInMoveTargets,
   incrementStatsFor,
   evaluateWinner,
-} from '@/store/game-logic/engine';
+} from './engine';
 
 type GameAction =
   | { type: 'SELECT_PIECE'; payload: Position }

@@ -9,9 +9,9 @@ import type {
   Piece,
   Position,
   Winner,
-} from '@/store/game-logic/types';
-import { isInMoveTargets } from '@/store/game-logic/engine';
-import { equals, positionKey } from '@/store/game-logic/utils';
+} from '@/game-logic/types';
+import { isInMoveTargets } from '@/game-logic/engine';
+import { equals, positionKey } from '@/game-logic/utils';
 import { BoardSquare } from './BoardSquare';
 import { CheckersPiece } from './CheckersPiece';
 import { DraggablePiece } from './DraggablePiece';

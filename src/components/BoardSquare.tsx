@@ -1,8 +1,8 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
-import type { Position } from '@/store/game-logic/types';
-import { isDarkSquare } from '@/store/game-logic/rules';
+import type { Position } from '@/game-logic/types';
+import { isDarkSquare } from '@/game-logic/rules';
 
 export interface BoardSquareProps {
   x: number;

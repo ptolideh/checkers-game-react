@@ -1,6 +1,6 @@
 import React from 'react';
-import type { Color, GameMode, Stats, Winner } from '@/store/game-logic/types';
-import { GameModes, PieceColor } from '@/store/game-logic/rules';
+import type { Color, GameMode, Stats, Winner } from '@/game-logic/types';
+import { GameModes, PieceColor } from '@/game-logic/rules';
 import { StatCard } from '@/components/StatCard';
 import { cn } from '@/lib/utils';
 
