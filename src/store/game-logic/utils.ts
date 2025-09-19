@@ -28,4 +28,10 @@ const positionKey = {
   },
 } as const;
 
-export { getPiece, getOffsetsFor, isMoveInBounds, equals, cloneBoard, positionKey };
+const selectRandom = <T>(items: T[]): T | null => {
+  if (items.length === 0) return null;
+  const index = Math.floor(Math.random() * items.length);
+  return items[index] ?? null;
+};
+
+export { getPiece, getOffsetsFor, isMoveInBounds, equals, cloneBoard, selectRandom, positionKey };
