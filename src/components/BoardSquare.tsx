@@ -27,9 +27,27 @@ const BoardSquare = React.memo<BoardSquareProps>(
       data: { position },
     });
 
-    const handleClick = React.useCallback(() => {
+    const handleSelect = React.useCallback(() => {
       !isDisabled && onSquareSelect(position);
     }, [onSquareSelect, position, isDisabled]);
+
+    const handleClick = React.useCallback(
+      (e: React.MouseEvent) => {
+        e.preventDefault();
+        handleSelect();
+      },
+      [handleSelect],
+    );
+
+    const handleKeyDown = React.useCallback(
+      (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          handleSelect();
+        }
+      },
+      [handleSelect],
+    );
 
     return (
       <div
@@ -45,12 +63,14 @@ const BoardSquare = React.memo<BoardSquareProps>(
         )}
         ref={setNodeRef}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
         role="gridcell"
         aria-label={`Square ${y + 1}, ${x + 1}`}
         aria-disabled={isDisabled}
         aria-selected={isTarget}
         aria-rowindex={y + 1}
         aria-colindex={x + 1}
+        tabIndex={isDisabled ? -1 : 0}
       >
         {children}
       </div>
