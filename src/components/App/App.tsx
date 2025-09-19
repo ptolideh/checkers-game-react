@@ -1,7 +1,9 @@
 import React, { useReducer } from 'react';
 import { BoardView } from '../BoardView';
+import { GameModeSelection } from '../GameModeSelection';
+import { GameStats } from '../GameStats';
 import type { Position, Board, GameState, Stats, GameMode, Piece } from '@/store/game-logic/types';
-import { BOARD_SIZE, isStartingSquareFor, PieceColor, GameModes } from '@/store/game-logic/rules';
+import { BOARD_SIZE, isStartingSquareFor, PieceColor } from '@/store/game-logic/rules';
 import { equals, getPiece, positionKey } from '@/store/game-logic/utils';
 import {
   applyCaptureMove,
@@ -238,9 +240,12 @@ export const App: React.FC = () => {
     [dispatch],
   );
 
-  const applyMove = React.useCallback((position: Position) => {
-    dispatch({ type: 'APPLY_MOVE', payload: position });
-  }, []);
+  const applyMove = React.useCallback(
+    (position: Position) => {
+      dispatch({ type: 'APPLY_MOVE', payload: position });
+    },
+    [dispatch],
+  );
 
   useComputerTurn({
     state,
@@ -248,9 +253,12 @@ export const App: React.FC = () => {
     onApplyMove: applyMove,
   });
 
-  const handlePieceSelect = React.useCallback((position: Position) => {
-    dispatch({ type: 'SELECT_PIECE', payload: position });
-  }, []);
+  const handlePieceSelect = React.useCallback(
+    (position: Position) => {
+      dispatch({ type: 'SELECT_PIECE', payload: position });
+    },
+    [dispatch],
+  );
 
   const handleSquareSelect = React.useCallback(
     (target: Position) => {
@@ -262,26 +270,19 @@ export const App: React.FC = () => {
     [dispatch],
   );
 
+  const handleModeSelect = React.useCallback(
+    (mode: GameMode) => {
+      dispatch({ type: 'SET_MODE', payload: mode });
+    },
+    [dispatch],
+  );
+
   // Game mode selection
   if (!state.mode) {
     return (
       <div className="p-4">
         <h1 className="text-xl font-semibold mb-4">Checkers Game</h1>
-        <p className="mb-2">Choose a mode to start:</p>
-        <div className="flex gap-2">
-          <button
-            className="px-3 py-1 rounded border border-black hover:bg-gray-100"
-            onClick={() => dispatch({ type: 'SET_MODE', payload: GameModes.PlayerVsPlayer })}
-          >
-            Two Players (PvP)
-          </button>
-          <button
-            className="px-3 py-1 rounded border border-black hover:bg-gray-100"
-            onClick={() => dispatch({ type: 'SET_MODE', payload: GameModes.PlayerVsComputer })}
-          >
-            Single Player (PvC)
-          </button>
-        </div>
+        <GameModeSelection className="mt-2" onSelectMode={handleModeSelect} />
       </div>
     );
   }
@@ -290,21 +291,12 @@ export const App: React.FC = () => {
     <div className="p-4">
       <h1 className="text-xl font-semibold mb-2">Checkers Game</h1>
       <div className="flex items-center gap-4 text-sm mb-4">
-        <span className="mr-3">
-          Mode:{' '}
-          {state.mode === GameModes.PlayerVsPlayer
-            ? 'Multiplayer (Player vs Player)'
-            : 'Single Player (Player vs Computer)'}
-        </span>
-        <span className="mr-3">
-          Current: {state.currentPlayer === PieceColor.light ? 'Red' : 'Black'}
-        </span>
-        <span className="mr-2">
-          Red — Moves: {state.stats.light.moves}, Captures: {state.stats.light.captures}
-        </span>
-        <span>
-          Black — Moves: {state.stats.dark.moves}, Captures: {state.stats.dark.captures}
-        </span>
+        <GameStats
+          mode={state.mode}
+          currentPlayer={state.currentPlayer}
+          stats={state.stats}
+          winner={state.winner}
+        />
         <button
           className="ml-auto px-3 py-1 rounded border border-black hover:bg-gray-100"
           onClick={() => dispatch({ type: 'NEW_GAME' })}
@@ -312,13 +304,6 @@ export const App: React.FC = () => {
           {state.winner ? 'New Game' : 'Restart'}
         </button>
       </div>
-      {state.winner && (
-        <div className="mb-4 p-3 border border-green-700 bg-green-100 text-green-900 rounded">
-          {state.winner === 'draw'
-            ? 'The game ended in a draw. Great match!'
-            : `${state.winner === PieceColor.light ? 'Red' : 'Black'} wins the game!`}
-        </div>
-      )}
       <BoardView
         board={state.board}
         selectedPiece={state.selectedPiece}
