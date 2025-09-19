@@ -260,7 +260,15 @@ export const App: React.FC = () => {
         <span className="mr-3">
           Mode: {state.mode === 'pvp' ? 'Two Players (PvP)' : 'Single Player (PvC)'}
         </span>
-        <span>Current: {state.currentPlayer === PieceColor.light ? 'Red' : 'Black'}</span>
+        <span className="mr-3">
+          Current: {state.currentPlayer === PieceColor.light ? 'Red' : 'Black'}
+        </span>
+        <span className="mr-2">
+          Red — Moves: {state.stats.light.moves}, Captures: {state.stats.light.captures}
+        </span>
+        <span>
+          Black — Moves: {state.stats.dark.moves}, Captures: {state.stats.dark.captures}
+        </span>
       </div>
       <div className="flex flex-col border border-black w-fit">
         {state.board?.map((row, rowIndex) => (
