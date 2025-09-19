@@ -1,2 +1,2 @@
 [build]
-  command = "npm install --no-save @rollup/rollup-linux-x64-gnu && npm run build"
+  command = "npm install --no-save @rollup/rollup-linux-x64-gnu lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu && npm run build"
