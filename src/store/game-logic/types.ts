@@ -5,6 +5,8 @@ interface Position {
 
 type Color = 'dark' | 'light';
 
+type Winner = Color | 'draw' | null;
+
 type Board = (Piece | null)[][];
 
 interface Step {
@@ -47,6 +49,7 @@ interface GameState {
   mode: 'pvp' | 'pvc' | null;
   currentPlayer: Color;
   board: Board;
+  winner: Winner;
   forcedCaptureKey: string | null;
   stats: Stats;
 }
@@ -65,4 +68,5 @@ export type {
   GameState,
   PlayerStats,
   Stats,
+  Winner,
 };

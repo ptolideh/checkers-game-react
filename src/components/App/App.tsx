@@ -76,10 +76,11 @@ const getInitialBoardAndSquaresState = () => {
 };
 
 const initialState: GameState = {
+  ...getInitialBoardAndSquaresState(),
   selectedPiece: null,
   mode: null,
   currentPlayer: PieceColor.dark,
-  ...getInitialBoardAndSquaresState(),
+  winner: null,
   forcedCaptureKey: null,
   stats: {
     [PieceColor.dark]: { moves: 0, captures: 0 },
