@@ -32,11 +32,12 @@ export const BoardSquare = React.memo<BoardSquareProps>(
     return (
       <div
         className={cn(
-          'border border-l-gray-800 border-r-gray-800 size-10 flex justify-center items-center transition-[background-color,box-shadow] duration-[400ms,300ms] ease-in-out',
+          'border border-l-gray-800 border-r-gray-800  flex justify-center items-center transition-[background-color,box-shadow] duration-[400ms,300ms] ease-in-out',
+          'size-10 sm:size-13',
           isDarkSquare(position) ? 'bg-green-800' : 'bg-orange-100',
-          { 'bg-yellow-300 inset-ring-3 inset-ring-yellow-500': isTarget },
+          { 'bg-yellow-300 inset-ring-4 inset-ring-yellow-500': isTarget },
           { 'cursor-pointer': !isDisabled },
-          { 'inset-ring-10 duration-800': isOver && !dropDisabled },
+          { 'inset-ring-10 duration-500': isOver && !dropDisabled },
         )}
         ref={setNodeRef}
         onClick={handleClick}

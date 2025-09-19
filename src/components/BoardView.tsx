@@ -93,7 +93,7 @@ const BoardView: React.FC<BoardViewProps> = ({
     activePiece && selectedPiece ? equals(activePiece, selectedPiece) : false;
 
   const frameStyle = [
-    'rounded-2xl border-16 border-orange-950',
+    'rounded-2xl border-12 sm:border-16 border-orange-950',
     'bg-gradient-to-br from-[#5c3b20] via-[#4b2e14] to-[#2e1b0a]',
     'shadow-[0_6px_0_#2f1d0f,0_10px_0_#1d1109,0_18px_24px_rgba(0,0,0,0.55)]',
   ];

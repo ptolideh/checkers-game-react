@@ -1,6 +1,8 @@
 import React from 'react';
 import type { Color, GameMode, Stats, Winner } from '@/store/game-logic/types';
 import { GameModes, PieceColor } from '@/store/game-logic/rules';
+import { StatCard } from '@/components/StatCard';
+import { cn } from '@/lib/utils';
 
 interface GameStatsProps {
   mode: GameMode;
@@ -10,9 +12,7 @@ interface GameStatsProps {
 }
 
 const formatModeLabel = (mode: GameMode) => {
-  return mode === GameModes.PlayerVsPlayer
-    ? 'Multiplayer (Player vs Player)'
-    : 'Single Player (Player vs Computer)';
+  return mode === GameModes.PlayerVsPlayer ? '👥 Two Players' : '🤖 Single Player';
 };
 
 const formatPlayerName = (color: Color) => {
@@ -25,25 +25,44 @@ const formatWinnerMessage = (winner: Winner) => {
   return `${formatPlayerName(winner)} wins the game!`;
 };
 
-export const GameStats: React.FC<GameStatsProps> = ({ mode, currentPlayer, stats, winner }) => {
+const GameStats: React.FC<GameStatsProps> = ({ mode, currentPlayer, stats, winner }) => {
   const winnerMessage = formatWinnerMessage(winner);
 
+  const isActive = (color: Color) => {
+    if (winner === 'draw') return false;
+    if (winner && winner !== color) return false;
+    if (winner && winner === color) return true;
+    return currentPlayer === color;
+  };
+
   return (
-    <>
-      <span className="mr-3">Mode: {formatModeLabel(mode)}</span>
-      {winnerMessage ? (
-        <span className="mr-3 font-semibold text-green-700">{winnerMessage}</span>
-      ) : (
-        <span className="mr-3">Current: {formatPlayerName(currentPlayer)}</span>
-      )}
-      <span className="mr-2">
-        Red — Moves: {stats.light.moves}, Captures: {stats.light.captures}
-      </span>
-      <span>
-        Black — Moves: {stats.dark.moves}, Captures: {stats.dark.captures}
-      </span>
-    </>
+    <div className="w-full flex flex-col gap-5 px-3 justify-center items-center select-none">
+      <div className="flex flex-col items-center">
+        <h2 className={cn('text-slate-200 text-sm opacity-50', { 'text-xs': !!winner })}>
+          {formatModeLabel(mode)}
+        </h2>
+        {winnerMessage ? (
+          <h2 className="font-semibold text-green-400 text-lg">{winnerMessage}</h2>
+        ) : null}
+      </div>
+      <div className="flex gap-3 w-full">
+        <StatCard
+          color={PieceColor.light}
+          label={`${formatPlayerName(PieceColor.light)}`}
+          moves={stats.light.moves}
+          captures={stats.light.captures}
+          isActive={isActive(PieceColor.light)}
+        />
+        <StatCard
+          color={PieceColor.dark}
+          label={`${formatPlayerName(PieceColor.dark)}`}
+          moves={stats.dark.moves}
+          captures={stats.dark.captures}
+          isActive={isActive(PieceColor.dark)}
+        />
+      </div>
+    </div>
   );
 };
 
-GameStats.displayName = 'GameStats';
+export { GameStats };

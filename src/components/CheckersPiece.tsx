@@ -2,7 +2,7 @@ import React from 'react';
 import type { Color, Position } from '@/store/game-logic/types';
 import { cn } from '@/lib/utils';
 
-export interface CheckersPieceProps {
+interface CheckersPieceProps {
   x: number;
   y: number;
   color: Color;
@@ -15,7 +15,7 @@ export interface CheckersPieceProps {
   onSelect?: (position: Position) => void;
 }
 
-export const CheckersPiece = React.memo<CheckersPieceProps>(
+const CheckersPiece = React.memo<CheckersPieceProps>(
   ({
     x,
     y,
@@ -41,7 +41,8 @@ export const CheckersPiece = React.memo<CheckersPieceProps>(
     return (
       <div
         className={cn(
-          'rounded-full size-6 flex justify-center items-center opacity-100 ring-1 transition-[opacity,box-shadow] duration-400ms ease-in-out ',
+          'rounded-full flex justify-center items-center opacity-100 ring-1 transition-[opacity,box-shadow] duration-400ms ease-in-out ',
+          'size-6.5 sm:size-9',
           color === 'dark' ? 'bg-gray-900 ring-gray-950' : 'bg-red-700 ring-red-800',
           onSelect && !isDisabled ? 'cursor-pointer' : '',
           isDimmed ? 'opacity-60' : '',
@@ -53,13 +54,14 @@ export const CheckersPiece = React.memo<CheckersPieceProps>(
       >
         <div
           className={cn(
-            'flex items-center justify-center size-4.5 rounded-full relative drop-shadow-md',
+            'flex items-center justify-center rounded-full relative drop-shadow-md',
+            'size-5 sm:size-6',
             color === 'dark' ? 'bg-gray-800' : 'bg-red-600',
             isKing ? (color === 'dark' ? 'bg-gray-900' : 'bg-red-900') : '',
           )}
         >
           {isKing ? (
-            <span className="absolute text-[0.7rem] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <span className="inline-block absolute text-[0.8rem] sm:text-[1rem] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
               👑
             </span>
           ) : null}
@@ -68,3 +70,6 @@ export const CheckersPiece = React.memo<CheckersPieceProps>(
     );
   },
 );
+
+export type { CheckersPieceProps };
+export { CheckersPiece };

@@ -7,7 +7,6 @@ import { CheckersPiece, type CheckersPieceProps } from './CheckersPiece';
 
 interface DraggablePieceProps extends CheckersPieceProps {
   dragDisabled?: boolean;
-  className?: string;
 }
 
 export const DraggablePiece: React.FC<DraggablePieceProps> = ({
@@ -21,7 +20,6 @@ export const DraggablePiece: React.FC<DraggablePieceProps> = ({
   isInteractive,
   dragDisabled,
   onSelect,
-  className,
 }) => {
   const draggableDisabled = dragDisabled ?? isDisabled;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -37,7 +35,7 @@ export const DraggablePiece: React.FC<DraggablePieceProps> = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={className} {...listeners} {...attributes}>
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
       <CheckersPiece
         x={x}
         y={y}

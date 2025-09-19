@@ -10,6 +10,7 @@ import {
 } from '@/store/game-logic/engine';
 import { gameReducer, initialGameState } from '@/store/game-logic/reducer';
 import { useComputerTurn } from '@/hooks/useComputerTurn';
+import { Layout } from '../Layout';
 
 export const App: React.FC = () => {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
@@ -78,33 +79,27 @@ export const App: React.FC = () => {
     [dispatch],
   );
 
+  const handleNewGame = React.useCallback(() => {
+    dispatch({ type: 'NEW_GAME' });
+  }, [dispatch]);
+
   // Game mode selection
   if (!state.mode) {
     return (
-      <div className="p-4">
-        <h1 className="text-xl font-semibold mb-4">Checkers Game</h1>
-        <GameModeSelection className="mt-2" onSelectMode={handleModeSelect} />
-      </div>
+      <Layout>
+        <GameModeSelection onSelectMode={handleModeSelect} />
+      </Layout>
     );
   }
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-semibold mb-2">Checkers Game</h1>
-      <div className="flex items-center gap-4 text-sm mb-4">
-        <GameStats
-          mode={state.mode}
-          currentPlayer={state.currentPlayer}
-          stats={state.stats}
-          winner={state.winner}
-        />
-        <button
-          className="ml-auto px-3 py-1 rounded border border-black hover:bg-gray-100"
-          onClick={() => dispatch({ type: 'NEW_GAME' })}
-        >
-          {state.winner ? 'New Game' : 'Restart'}
-        </button>
-      </div>
+    <Layout>
+      <GameStats
+        mode={state.mode}
+        currentPlayer={state.currentPlayer}
+        stats={state.stats}
+        winner={state.winner}
+      />
       <BoardView
         board={state.board}
         selectedPiece={state.selectedPiece}
@@ -114,6 +109,12 @@ export const App: React.FC = () => {
         onPieceSelect={handlePieceSelect}
         winner={state.winner}
       />
-    </div>
+      <button
+        className="px-6 py-2 mt-4 rounded-2xl border-1 border-slate-400 text-slate-400 bg-transparent text-sm font-semibold  transition-colors duration-300 hover:bg-slate-200 hover:text-slate-900 hover:cursor-pointer"
+        onClick={handleNewGame}
+      >
+        {state.winner ? 'New Game' : 'Restart'}
+      </button>
+    </Layout>
   );
 };
